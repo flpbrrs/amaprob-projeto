@@ -1,0 +1,14 @@
+[project]
+name = "amaprob"
+version = "0.1.0"
+description = "Estimação probabilística do carboidrato de refeições brasileiras a partir de registros alimentares incompletos (POF 2017–2018)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy",
+    "pandas",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12"]
+build-backend = "uv_build"

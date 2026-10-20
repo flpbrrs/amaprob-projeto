@@ -1,0 +1,22 @@
+# Ambiente
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Dados: microdados da POF e derivados nunca entram no git
+data/raw/*
+data/interim/*
+data/processed/*
+!data/*/.gitkeep
+
+# Resultados pesados (métricas em CSV podem ser versionadas)
+results/**/*.parquet
+results/**/*.npz
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
