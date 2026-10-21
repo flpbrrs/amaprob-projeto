@@ -21,7 +21,14 @@ Novas dependências entram com `uv add <pacote>` e são combinadas com o time an
 
 ## Dados
 
-Os microdados **não** são versionados. Cada pessoa baixa localmente para `data/raw/` (instruções de download a definir).
+Os microdados **não** são versionados. Cada pessoa baixa direto do IBGE para `data/raw/pof2017_2018/` e extrai cada `.zip` numa pasta de mesmo nome:
+
+- Fonte: <https://ftp.ibge.gov.br/Orcamentos_Familiares/Pesquisa_de_Orcamentos_Familiares_2017_2018/Microdados/>
+- `Dados_20230713.zip` (~146 MB): contém `CONSUMO_ALIMENTAR.txt`
+- `Documentacao_20230713.zip`: dicionário de variáveis e classificação dos grupos alimentares
+- `Programas_de_Leitura_20230713.zip`: layout de referência (R e SAS)
+
+Resultado esperado: `data/raw/pof2017_2018/Dados_20230713/CONSUMO_ALIMENTAR.txt`.
 
 ```
 data/
