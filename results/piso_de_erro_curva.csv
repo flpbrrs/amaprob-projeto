@@ -1,0 +1,23 @@
+grupos_divididos,K,mae_g,r2,pct_ate_meia_dose
+,21,11.79383905245769,0.8237344309997063,49.38320296237867
+Bebidas,34,9.954192394974744,0.8511948844849032,60.37818532395539
+Bebidas | Farinhas e massas,39,7.962241208027753,0.9014900921848674,67.47080347948027
+Bebidas | Farinhas e massas | Frutas,50,7.136535038685326,0.9160136807058079,71.30305221411513
+Bebidas | Farinhas e massas | Frutas | Laticínios,57,6.614955184546114,0.9255799757961027,73.40213413966126
+Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados,66,6.168277362213737,0.9306584235831089,75.65240255045028
+Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces,75,5.818760221088912,0.939277105285774,76.695370187778
+Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais,79,5.615607503004054,0.9416088440992939,77.75805780144175
+Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes,96,5.541779175682548,0.9436316850318685,77.8084532965227
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches",99,5.45843298561129,0.945364302768636,78.1436928942352
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos",102,5.340887377799803,0.9460635012168254,78.9478297070488
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas",106,5.212911304016672,0.9467735537872243,79.40577137974101
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes",111,5.210356232312281,0.9468125923132054,79.46931352571266
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes | Verduras",115,5.206088682664738,0.9468610110406641,79.49341571901225
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes | Verduras | Óleos e gorduras",116,5.206077517347811,0.9468608923694423,79.49341571901225
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes | Verduras | Óleos e gorduras | Molhos e condimentos",116,5.206077517347811,0.9468608923694423,79.49341571901225
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes | Verduras | Óleos e gorduras | Molhos e condimentos | Oleaginosas (castanhas, nozes, amendoins)",116,5.206077517347811,0.9468608923694423,79.49341571901225
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes | Verduras | Óleos e gorduras | Molhos e condimentos | Oleaginosas (castanhas, nozes, amendoins) | Suplementos",116,5.206077517347811,0.9468608923694423,79.49341571901225
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes | Verduras | Óleos e gorduras | Molhos e condimentos | Oleaginosas (castanhas, nozes, amendoins) | Suplementos | Preparações mistas",116,5.206077517347811,0.9468608923694423,79.49341571901225
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes | Verduras | Óleos e gorduras | Molhos e condimentos | Oleaginosas (castanhas, nozes, amendoins) | Suplementos | Preparações mistas | Sopas e caldos",116,5.206077517347811,0.9468608923694423,79.49341571901225
+"Bebidas | Farinhas e massas | Frutas | Laticínios | Panificados | Doces | Cereais | Carnes | Pizzas, salgados e sanduíches | Raízes e tubérculos | Leguminosas | Legumes | Verduras | Óleos e gorduras | Molhos e condimentos | Oleaginosas (castanhas, nozes, amendoins) | Suplementos | Preparações mistas | Sopas e caldos | Ovos",117,5.206162892667385,0.9468635819086759,79.48903350204868
+PROPOSTA: Bebidas (4 perfis) | Farinhas e massas,29,8.057204769798947,0.8993625907604922,67.01505291526983
