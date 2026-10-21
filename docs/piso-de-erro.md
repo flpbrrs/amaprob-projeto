@@ -38,6 +38,35 @@ Referência: prever sempre a média dá MAE de 31,6 g.
 
 Ganho ao dividir cada grupo sozinho (top 6): Bebidas −1,8 g · Farinhas e massas −1,7 g · Frutas −0,8 g · Laticínios −0,4 g · Panificados −0,3 g · Doces −0,3 g. Os demais ficam abaixo de 0,1 g.
 
+## Como ler os CSVs
+
+### `results/piso_de_erro_ranking.csv`: qual grupo vale a pena dividir?
+
+Cada linha é um teste isolado: parte das 21 gavetas básicas e divide **apenas um grupo** nos seus subgrupos do IBGE.
+
+| Coluna | Significado |
+|---|---|
+| `grupo` | Grupo dividido no teste |
+| `K` | Total de gavetas após a divisão (ex.: Bebidas → 21 − 1 + 14 = 34) |
+| `ganho_mae_g` | Quanto o erro médio caiu, em gramas, em relação às 21 gavetas |
+
+As linhas estão ordenadas do maior para o menor ganho.
+
+### `results/piso_de_erro_curva.csv`: e se as divisões se acumularem?
+
+As divisões entram uma após a outra, na ordem do ranking (Bebidas; Bebidas + Farinhas e massas; …).
+
+| Coluna | Significado |
+|---|---|
+| `grupos_divididos` | Grupos já divididos até a linha (vazio = nenhum) |
+| `K` | Total de gavetas |
+| `mae_g` | Erro absoluto médio por refeição, em gramas |
+| `r2` | Fração da variação do carboidrato entre refeições explicada pela regra (0 = nada, 1 = tudo) |
+| `pct_ate_meia_dose` | % das refeições com erro de até 7,5 g |
+
+- Várias linhas finais se repetem (K = 116): grupos com um único subgrupo, como "Sopas e caldos", não mudam ao ser "divididos".
+- A última linha (`PROPOSTA`) não segue o ranking: é a configuração de 29 gavetas, incluída para comparação.
+
 ## A proposta de 29 gavetas
 
 - **Os 20 grupos do IBGE como base**, com o Açúcar de mesa em gaveta própria (o paciente costuma saber que adoçou, mas não quanto).
@@ -50,7 +79,27 @@ Ganho ao dividir cada grupo sozinho (top 6): Bebidas −1,8 g · Farinhas e mass
 
 Ela alcança praticamente o mesmo erro da versão com 39 gavetas, usando 10 a menos.
 
-**Por que não 117 gavetas, se o erro é menor?** Porque o piso é só metade da história. Cada refeição usa 3 ou 4 gavetas. Com 117, quase todas ficam vazias em quase todas as refeições, e os modelos de imputação (Parte 1) têm muito pouco exemplo por gaveta para aprender tamanhos de porção e combinações. Esse custo não aparece nesta medição.
+### Por que 29, e não mais?
+
+29 não é um ótimo matemático: nesta medição, mais gavetas sempre reduzem o erro. É um ponto de equilíbrio, sustentado por quatro argumentos.
+
+**1. Custo-benefício de cada gaveta extra.**
+
+| Trecho | Queda do erro | Gavetas a mais | Ganho por gaveta |
+|---|---|---|---|
+| 21 → 29 | 3,7 g | 8 | ~0,47 g |
+| 29 → 39 | 0,1 g | 10 | ~0,01 g |
+| 29 → 117 | 2,9 g | 88 | ~0,03 g |
+
+As 8 primeiras gavetas extras rendem, cada uma, cerca de 15 vezes mais que as 88 seguintes.
+
+**2. Custo para a imputação (Parte 1), não medido aqui.** Cada refeição usa 3 ou 4 gavetas. Com 117, quase todas ficam vazias em quase todas as refeições, várias gavetas têm poucos exemplos para aprender o tamanho da porção, e os pares de gavetas cujas combinações precisam ser aprendidas passam de ~400 (K = 29) para ~6.800 (K = 117).
+
+**3. Interpretabilidade.** Cada gaveta tem um sentido nutricional claro (ex.: "bebidas açucaradas", "farinha de mandioca").
+
+**4. Coerência com o plano**, que previa K entre 15 e 30.
+
+O argumento 2 é um raciocínio, ainda não uma medição. Ele pode ser verificado depois com uma análise de sensibilidade da Parte 1 (ex.: 29 vs. 50 gavetas).
 
 ## Critério de meia dose
 
