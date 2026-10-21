@@ -1,7 +1,6 @@
 # CLAUDE.md — Projeto Final de Aprendizagem de Máquina Probabilística (2026.2)
 
 Este arquivo orienta o Claude Code na implementação do projeto. Leia-o inteiro antes de propor ou escrever código.
-Fonte da proposta: Claude Doc "Proposta de Projeto Final — Aprendizagem de Máquina Probabilística".
 
 ---
 
@@ -11,34 +10,49 @@ Fonte da proposta: Claude Doc "Proposta de Projeto Final — Aprendizagem de Má
 
 No cuidado em diabetes tipo 1, o carboidrato da refeição orienta a dose de insulina, mas o registro do paciente raramente é completo: ele informa quais alimentos comeu e, às vezes, a quantidade de alguns. Com registro completo, o carboidrato é calculável por tabela. Com informação faltando, é preciso inferir o que falta e quantificar a confiabilidade da estimativa. **O projeto investiga esse segundo regime.**
 
-A identificação dos alimentos (que na pesquisa de mestrado vem de imagens) está abstraída: a lista de alimentos vem do dataset.
+A identificação dos alimentos (que, num sistema real, viria de imagens) está abstraída: a lista de alimentos vem do dataset.
 
-**Entregáveis da disciplina:** artigo (Introdução, Fundamentação, Metodologia, Experimentos, Conclusão), código (notebooks e/ou repositório) e apresentação. Entrega final: 30/11/2026. Exigências: dados reais, mais de um modelo por parte, comparação de desempenho e pelo menos um algoritmo de fora da ementa.
+**Exigências da disciplina** (descrição oficial do projeto):
+- Trio de pós-graduação: as **três partes** são obrigatórias — (1) dados faltantes, (2) regressão com predições probabilísticas, (3) ajuste de hiperparâmetros por otimização bayesiana.
+- Dados reais; mais de um modelo por parte, com comparação de desempenho; pacotes prontos são permitidos.
+- O artigo deve indicar **como cada participante contribuiu**.
+- Entregáveis: artigo (Introdução, Fundamentação teórica, Metodologia, Experimentos, Conclusão; LaTeX em modelo de congresso, ex.: NeurIPS), código (notebooks e/ou repositório) e apresentação.
+- Datas: acompanhamento de 19/11 a 26/11; **entrega final em 30/11/2026** (SIGAA); apresentações em 01, 03, 08 ou 10/12.
 
 ---
 
 ## 2. Dados
 
-**Fonte:** microdados de consumo alimentar individual da POF 2017–2018 (Pesquisa de Orçamentos Familiares, IBGE). Dados reais, dois dias de registro por pessoa.
+**Fonte:** microdados de consumo alimentar individual da POF 2017–2018 (Pesquisa de Orçamentos Familiares, IBGE), versão 20230713. Dados reais, até dois dias de registro por pessoa. Instruções de download no `README.md`.
 
-**Unidade de análise:** a refeição, ou seja, os itens da mesma pessoa, no mesmo dia e na mesma ocasião.
+**Verificado no dicionário de variáveis e nos dados:**
+- Arquivo `CONSUMO_ALIMENTAR.txt`, largura fixa, uma linha por item (1,18 milhão de itens, 46.164 pessoas). Leitor em `src/amaprob/data/pof.py`.
+- `QTD` = gramas consumidas = `V9005` (quantidade da medida caseira) × `GRAMATURA1` (gramas da medida). Ver Regra 1.
+- `CHOTOT` = carboidrato total do item (g), calculado pelo IBGE com a TBCA 7.0 (Tabela Brasileira de Composição de Alimentos). **`y` = soma de `CHOTOT` na refeição**; não é preciso cruzar com tabela externa.
+- `V9017` = ocasião (1 café da manhã, 2 almoço, 3 lanche, 4 jantar, 5 ceia, 6 outra, 9 não determinado); `V9015` = horário.
+- Pessoa = `COD_UPA` + `NUM_DOM` + `NUM_UC` + `COD_INFORMANTE`.
+- Adições (açúcar, azeite, margarina…) são linhas próprias, sem medida caseira. O açúcar de mesa responde por 8,5% de todo o carboidrato.
 
-**Representação** (para N refeições e K grupos alimentares):
+**Unidade de análise — refeição:** itens da mesma pessoa, no mesmo dia, na mesma ocasião e no mesmo horário. Entram só refeições que pedem insulina: ocasiões 1 a 5 com pelo menos 10 g de carboidrato (304.670 refeições). Código em `src/amaprob/data/refeicoes.py`.
+
+**Gavetas (grupos alimentares):** derivadas da classificação do IBGE (20 grupos, 116 subgrupos), versionada em `configs/classificacao_ibge.csv`. O açúcar de mesa é gaveta própria. **Proposta em validação: K = 29** (Farinhas e massas dividida em subgrupos; Bebidas em 4 perfis nutricionais). Método e justificativa em `docs/piso-de-erro.md`.
+
+**Representação** (para N refeições e K gavetas):
 
 | Objeto | Forma | Conteúdo |
 |---|---|---|
-| `X` | N × K | `log1p(gramas)` por grupo; 0 quando o grupo está ausente |
-| `P` | N × K | presença do grupo (0/1) — **sempre observada** |
+| `X` | N × K | `log1p(gramas)` por gaveta; 0 quando a gaveta está ausente |
+| `P` | N × K | presença da gaveta (0/1) — **sempre observada** |
 | `M` | N × K | máscara de quantidades ocultas; `M ⊆ P` |
-| `C` | N × d | contexto: ocasião, horário, região, sexo, idade, renda |
+| `C` | N × d | contexto: ocasião, horário, região/UF, renda; sexo e idade vêm do arquivo `MORADOR` (a verificar) |
 | `y` | N | carboidrato total da refeição (g) |
-| `person_id` | N | identificador do indivíduo (hierarquia e split) |
+| `person_id` | N | identificador do indivíduo (split) |
 
-**A verificar antes de codificar** (não assumir):
-- layout de largura fixa e dicionário de variáveis do IBGE para o arquivo de consumo alimentar;
-- como a ocasião/horário da refeição está codificada;
-- nome da coluna de carboidrato e tabela de composição usada pelo IBGE;
-- classificação de grupos alimentares a adotar (definir K entre ~15 e 30).
+**Escala log só na imputação.** A imputação trabalha em `log1p(gramas)`; a regressão recebe as quantidades de volta em gramas. Motivo: o carboidrato é quase linear nas gramas (R² de 0,81 em gramas contra 0,58 em log, com 20 grupos e regressão linear).
+
+**A verificar:**
+- `QUADRO` 72 e 73 = dia 1 e dia 2 de registro;
+- regra usada pelo IBGE para estimar os gramas do açúcar adicionado (146 valores distintos, concentrados em 5, 20 e 30 g).
 
 ---
 
@@ -46,22 +60,22 @@ A identificação dos alimentos (que na pesquisa de mestrado vem de imagens) est
 
 Violações destas regras invalidam o experimento. Sinalize imediatamente qualquer código que as quebre.
 
-1. **A medida caseira nunca é input.** As gramas da POF vêm de conversão da medida caseira; usá-la torna o problema determinístico.
-2. **Quantidades mascaradas nunca vazam.** Nenhuma etapa de imputação ou regressão pode ler `X[M]`. Elas só são usadas para avaliação.
+1. **A medida caseira nunca é input.** As gramas da POF vêm de conversão da medida caseira; usá-la torna o problema determinístico. O leitor não carrega `V9005`, `V9007`, `GRAMATURA1` nem `COD_UNIDADE_MEDIDA_FINAL`.
+2. **Quantidades mascaradas nunca vazam.** Nenhuma etapa de imputação ou regressão pode ler `X[M]`; elas só são usadas para avaliação. Os imputadores recebem `X` com `NaN` em `M`. Nutrientes (`CHOTOT` e outros) são `QTD` × composição: só servem como alvo, nunca como entrada.
 3. **Split por indivíduo.** Os dois dias de uma pessoa ficam no mesmo conjunto (treino, validação ou teste). Split por refeição causa vazamento.
 4. **Máscaras geradas antes da modelagem**, com semente fixa, e persistidas em disco. Todos os modelos usam as mesmas máscaras.
 5. **Dados reais como base.** O mascaramento é aplicado sobre registros reais; nenhum dado sintético entra como dado principal.
-6. **Nada é ajustado no teste.** Otimização bayesiana e escolhas de modelo usam apenas a validação.
+6. **Nada é ajustado no teste.** Otimização bayesiana, escolha de gavetas e escolhas de modelo usam apenas a validação.
 
 ---
 
 ## 4. Protocolo experimental
 
-- **Taxas de mascaramento:** `{0.0, 0.25, 0.5, 0.75, 1.0}` sobre as quantidades de itens **presentes**. A taxa 1.0 é o cenário "sei o que comi, não sei quanto".
-- **Mecanismo:** aleatório (MCAR), declarado como limitação.
-- **Repetições:** pelo menos 5 sementes por taxa; reportar média e desvio.
-- **Split:** treino / validação / teste por `person_id` (ex.: 70/15/15).
-- **Escala:** subamostrar (uma região ou amostra estratificada) se o volume inviabilizar o Processo Gaussiano ou o VAE.
+- **Taxas de mascaramento:** `{0.0, 0.25, 0.5, 0.75, 1.0}` sobre as quantidades de gavetas **presentes**. A taxa 1.0 é o cenário "sei o que comi, não sei quanto".
+- **Mecanismo:** aleatório (MCAR), declarado como limitação. O mascaramento é por gaveta (esconde todos os itens dela de uma vez), também declarado.
+- **Repetições:** 3 sementes por taxa; reportar média e desvio.
+- **Split:** treino / validação / teste = 70/15/15 por `person_id`, semente 0 (`src/amaprob/data/splits.py`).
+- **Escala:** amostra estratificada de refeições para os laços pesados (SVGP, otimização bayesiana). Treino em CPU.
 
 ---
 
@@ -81,16 +95,16 @@ class Imputer(Protocol):
 
 **Modelos:**
 
-| Modelo | Papel | Implementação sugerida |
+| Modelo | Escopo | Implementação sugerida |
 |---|---|---|
-| Porção padrão / média por grupo | Baseline determinístico (variância zero ou empírica) | NumPy |
-| PPCA via EM com dados faltantes | Ementa | NumPy, do zero (o scikit-learn não trata faltantes) |
-| VAE com máscara | Ementa | PyTorch; entrada = `X` observado + `P` + `M` + `C` |
-| Análise Fatorial ou GPLVM | Fora da ementa | FA via EM em NumPy, ou Bayesian GPLVM no GPyTorch |
+| Porção média por gaveta | Baseline de referência | NumPy |
+| PPCA (Análise de Componentes Principais Probabilística) via EM com dados faltantes | Obrigatório | NumPy, do zero (o scikit-learn não trata faltantes) |
+| FA (Análise Fatorial) via EM com dados faltantes | Obrigatório | NumPy; difere do PPCA só no ruído (diagonal em vez de isotrópico), reaproveita o código |
+| VAE (Autoencoder Variacional) com máscara | Extra | PyTorch; entrada = `X` observado + `P` + `M` + `C` |
 
-**Métricas** (por taxa): erro de imputação (MAE em gramas e em log), log-verossimilhança nos valores mascarados, cobertura do intervalo de 90%.
+**Métricas** (por taxa > 0): erro de imputação (MAE em gramas e em log), log-verossimilhança nos valores mascarados, cobertura do intervalo de 90%. Na taxa 0.0 não há o que imputar.
 
-**Decisão a registrar:** grupos ausentes entram como zeros observados no PPCA (má especificação conhecida) ou como condicionantes. Documentar a escolha.
+**Decisão em aberto:** gavetas ausentes como zeros observados no PPCA (má especificação conhecida) ou como condicionantes. Proposta: condicionantes.
 
 ---
 
@@ -107,15 +121,17 @@ class ProbRegressor(Protocol):
         """Retorna (n_samples, N) da preditiva."""
 ```
 
-`Z` = concatenação de quantidades (observadas ou imputadas), `P` e `C`.
+`Z` = concatenação de quantidades em gramas (observadas ou imputadas), `P` e `C`.
 
 **Modelos:**
 
-| Modelo | Implementação sugerida |
-|---|---|
-| Regressão linear bayesiana | Forma fechada conjugada em NumPy |
-| Regressão bayesiana hierárquica (efeito por indivíduo) | PyMC ou NumPyro |
-| Processo Gaussiano esparso (SVGP) | GPyTorch |
+| Modelo | Escopo | Implementação sugerida |
+|---|---|---|
+| Regressão linear bayesiana | Obrigatório | Forma fechada conjugada em NumPy |
+| Processo Gaussiano esparso (SVGP) | Obrigatório | GPyTorch |
+| Regressão bayesiana hierárquica Brasil → Região → Estado | Extra | PyMC ou NumPyro |
+
+A hierarquia é geográfica, não por indivíduo: com split por pessoa, quem está no teste nunca aparece no treino, e um efeito individual seria só uma amostra da priori.
 
 **Experimento central** (`src/amaprob/regression/propagation.py`):
 - **Plug-in:** imputa com a média da Parte 1 e prevê uma vez.
@@ -123,15 +139,15 @@ class ProbRegressor(Protocol):
 
 Hipótese: a propagação produz intervalos calibrados; o plug-in subestima a incerteza.
 
-**Leitura esperada:** com taxa 0.0, erro baixo (teste de sanidade). Com o aumento da taxa, a largura do intervalo cresce de forma calibrada. **Essa curva é o resultado principal.**
+**Leitura esperada:** com taxa 0.0, erro próximo do piso (~8 g com K = 29; teste de sanidade). Com o aumento da taxa, a largura do intervalo cresce de forma calibrada. **Essa curva é o resultado principal.**
 
-**Métricas:** MAE, NLL, CRPS (via `properscoring` sobre amostras), cobertura do intervalo de 90% (PICP), largura média do intervalo (MPIW).
+**Métricas:** MAE, NLL, CRPS (via `properscoring` sobre amostras), cobertura do intervalo de 90% (PICP), largura média do intervalo (MPIW). Proposta de métrica clínica: % de refeições com erro de até 7,5 g (meia unidade de insulina com relação 1 U : 15 g; fonte a verificar).
 
 ---
 
 ## 7. Parte 3 — Otimização bayesiana
 
-**Alvos:** dimensão latente e arquitetura do VAE; kernel e número de pontos indutores do SVGP; escalas das priors da hierarquia.
+**Alvos:** dimensão latente do PPCA/FA; número de pontos indutores do SVGP.
 
 **Contrato:**
 
@@ -141,7 +157,7 @@ def objective(params: dict) -> float:
 ```
 
 - **Método:** surrogate de Processo Gaussiano (BoTorch, ou `gp_minimize` do scikit-optimize).
-- **Comparação obrigatória:** busca aleatória com o mesmo orçamento de avaliações.
+- **Extra:** busca aleatória com o mesmo orçamento de avaliações, para comparação.
 - **Registro:** salvar todas as avaliações (parâmetros, NLL, tempo) para gerar a curva "melhor NLL × número de avaliações".
 
 ---
@@ -151,26 +167,29 @@ def objective(params: dict) -> float:
 ```
 amaprob-projeto/
 ├── CLAUDE.md
-├── pyproject.toml
-├── configs/                 # experimentos em YAML (taxas, sementes, splits, hiperparâmetros)
+├── README.md
+├── pyproject.toml / uv.lock
+├── configs/                 # classificação do IBGE e configurações de experimento
 ├── data/
 │   ├── raw/                 # microdados POF (fora do git)
-│   ├── interim/             # tabelas lidas
-│   └── processed/           # X, P, C, y, person_id, máscaras, splits (parquet/npz)
+│   ├── interim/             # tabelas lidas (fora do git)
+│   └── processed/           # X, P, C, y, person_id, máscaras, splits (fora do git)
+├── docs/                    # métodos e decisões para revisão (ex.: piso-de-erro.md)
 ├── src/amaprob/
-│   ├── domain/              # conceitos: refeição, grupo alimentar, especificação de máscara
-│   ├── data/                # leitura POF, montagem de refeições, grupos, splits, máscaras
-│   ├── imputation/          # Imputer + baselines, PPCA-EM, FA/GPLVM, VAE
+│   ├── data/                # leitura POF, gavetas, refeições, splits, máscaras
+│   ├── imputation/          # Imputer + baseline, PPCA-EM, FA-EM
 │   ├── regression/          # ProbRegressor + modelos + propagação
-│   ├── tuning/              # otimização bayesiana, busca aleatória, espaços de busca
+│   ├── tuning/              # otimização bayesiana
 │   ├── evaluation/          # métricas e calibração
-│   └── experiments/         # scripts de execução por parte (lêem configs, gravam results/)
-├── notebooks/               # só orquestração e figuras: 01_eda, 02_parte1, 03_parte2, 04_parte3, 05_figuras
-├── results/                 # métricas por (modelo, taxa, semente) em parquet/CSV + figuras
+│   └── experiments/         # scripts de execução (gravam em results/)
+├── notebooks/               # só orquestração e figuras
+├── results/                 # métricas em CSV + figuras
 └── tests/                   # máscaras, splits, métricas, contratos
 ```
 
-**Stack:** Python 3.11+, NumPy, pandas, SciPy, scikit-learn, PyTorch, GPyTorch, BoTorch (ou scikit-optimize), PyMC/NumPyro + ArviZ, properscoring, matplotlib. Pergunte antes de adicionar dependências fora desta lista.
+Subpacotes são criados quando o código da etapa é escrito, não antes.
+
+**Ambiente:** `uv` com Python 3.12. Dependências entram sob demanda, discutidas antes (`uv add`). Stack prevista: NumPy, pandas, SciPy, scikit-learn, PyTorch, GPyTorch, BoTorch (ou scikit-optimize), PyMC/NumPyro + ArviZ, properscoring, matplotlib, pytest. Para ler as planilhas do IBGE uma única vez: `uv run --with openpyxl`.
 
 ---
 
@@ -178,38 +197,53 @@ amaprob-projeto/
 
 **Arquitetura (aplicar com pragmatismo de código de pesquisa):**
 - Lógica em `src/`; notebooks apenas orquestram e plotam.
-- Modelos dependem dos contratos (`Imputer`, `ProbRegressor`), nunca uns dos outros. Trocar um modelo não deve exigir mudar o experimento (DIP, OCP).
-- `domain/` não importa PyTorch, GPyTorch ou PyMC.
+- Modelos dependem dos contratos (`Imputer`, `ProbRegressor`), nunca uns dos outros. Trocar um modelo não deve exigir mudar o experimento.
 - Uma responsabilidade por módulo: leitura de dados, mascaramento, modelagem e avaliação ficam separados.
-- Questione ativamente escolhas que violem DDD, Clean Architecture, SOLID ou Object Calisthenics, mas sem impor abstração que não se pague num projeto de sete semanas. Quando houver tensão, explique o custo-benefício.
+- Questione escolhas que adicionem abstração sem problema concreto. Quando houver tensão, explique o custo-benefício.
 
 **Rigor:**
 - Toda função aleatória recebe `rng` ou semente explícita.
 - Testes obrigatórios para: geração de máscaras (`M ⊆ P`, taxa correta), split por indivíduo (nenhum `person_id` em dois conjuntos), métricas (casos conhecidos) e ausência de leitura de `X[M]` na imputação.
-- Ao implementar um modelo, comece pelo caso mais simples que valide o pipeline de ponta a ponta (baseline + regressão linear bayesiana em taxa 0.0) antes de sofisticar.
-- Prefira implementar PPCA-EM e a regressão linear bayesiana do zero, com derivação comentada: fazem parte do aprendizado da disciplina.
+- Comece pelo caso mais simples que valide o pipeline de ponta a ponta (baseline + regressão linear bayesiana em taxa 0.0) antes de sofisticar.
+- Prefira implementar PPCA-EM, FA-EM e a regressão linear bayesiana do zero, com derivação comentada: fazem parte do aprendizado da disciplina.
 
-**Comunicação:**
+**Escrita:**
+- Comentários, docstrings e documentação em tom neutro e impessoal: sem nomes de pessoas, datas de decisão ou atribuições.
 - Expanda siglas na primeira ocorrência em comentários e documentação.
 - Sinalize suposições sobre os dados da POF como "a verificar".
+- Commits só com aprovação, após mostrar o que será incluído.
 
 ---
 
-## 10. Ordem de implementação
+## 10. Ordem de implementação e cronograma
 
-1. Leitura da POF, montagem de refeições, grupos alimentares e análise exploratória.
-2. Splits por indivíduo e máscaras persistidas, com testes.
-3. Baselines + regressão linear bayesiana em taxa 0.0 (pipeline de ponta a ponta).
-4. Parte 1: PPCA-EM → VAE → FA/GPLVM.
-5. Parte 2: hierárquica → SVGP → plug-in vs. propagação em todas as taxas.
-6. Parte 3: otimização bayesiana vs. busca aleatória.
-7. Tabelas e figuras finais para o artigo.
+| Semana | Entrega |
+|---|---|
+| 21–27/10 | Máscaras persistidas + testes; baseline + regressão linear bayesiana em taxa 0.0 (pipeline de ponta a ponta) |
+| 28/10–03/11 | Parte 1: PPCA-EM e FA-EM em todas as taxas |
+| 04–10/11 | Parte 2: SVGP; plug-in vs. propagação em todas as taxas (**resultado principal**) |
+| 11–17/11 | Parte 3: otimização bayesiana; extras se houver folga |
+| 18–24/11 | Tabelas, figuras e artigo; resultados prontos para o acompanhamento de 19/11 |
+| 25–30/11 | Revisão e entrega (30/11); slides até 01/12 |
+
+Extras, em ordem de prioridade: busca aleatória na Parte 3 → regressão hierárquica → VAE.
 
 ---
 
 ## 11. Riscos declarados
 
-- **Excesso de zeros:** vetores de refeição são esparsos e modelos gaussianos ficam mal especificados. Por isso o mascaramento atua só sobre itens presentes e usa-se o log das gramas. A omissão de itens inteiros é trabalho futuro.
+- **Excesso de zeros:** vetores de refeição são esparsos e modelos gaussianos ficam mal especificados. Por isso o mascaramento atua só sobre gavetas presentes e a imputação usa o log das gramas. A omissão de itens inteiros é trabalho futuro.
 - **Mecanismo de ausência:** mascaramento aleatório vs. omissão real sistemática — limitação declarada.
-- **Circularidade:** gramas derivadas da medida caseira (ver Regra 1).
-- **Escala:** subamostrar quando necessário.
+- **Gramas estimadas, não pesadas:** as gramas da POF vêm de medidas caseiras convertidas por tabela, com porções em degraus. Os modelos aprendem, em parte, essa conversão (ver Regra 1).
+- **População geral:** a POF não é uma amostra de pessoas com diabetes tipo 1 — limitação de validade externa.
+- **Modelos sofisticados podem não superar o baseline** em precisão; o foco do trabalho é a calibração da incerteza.
+- **Escala:** subamostrar quando necessário; treino em CPU.
+
+---
+
+## 12. Decisões em aberto
+
+- K = 29 gavetas (proposta em validação; `docs/piso-de-erro.md`).
+- Mascarar também o treino (proposta: sim, mesmo protocolo em treino, validação e teste).
+- Gavetas ausentes no PPCA/FA: zeros observados ou condicionantes (proposta: condicionantes).
+- Adoção da métrica clínica de meia dose.
