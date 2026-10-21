@@ -6,7 +6,7 @@ Projeto final de Aprendizagem de Máquina Probabilística (2026.2).
 
 No cuidado em diabetes tipo 1, o carboidrato da refeição orienta a dose de insulina, mas o registro do paciente raramente é completo. O projeto mascara quantidades de registros reais da POF 2017–2018 (Pesquisa de Orçamentos Familiares, IBGE), imputa o que falta com modelos probabilísticos e prevê o carboidrato com intervalo, verificando se a incerteza da imputação se propaga de forma calibrada.
 
-O plano completo, as regras invioláveis e o protocolo experimental estão em [`CLAUDE.md`](CLAUDE.md). Leia antes de contribuir.
+O plano completo, as regras invioláveis e o protocolo experimental estão em [`AGENTS.md`](AGENTS.md), lido também pelos assistentes de código. Leia antes de contribuir.
 
 ## Ambiente
 
@@ -39,4 +39,4 @@ data/
 
 ## Estrutura
 
-A estrutura de pastas segue a seção 8 do `CLAUDE.md`. Os subpacotes de `src/amaprob/` são criados à medida que o código de cada etapa é escrito.
+A estrutura de pastas segue a seção 8 do `AGENTS.md`. Os subpacotes de `src/amaprob/` são criados à medida que o código de cada etapa é escrito.
