@@ -129,9 +129,6 @@ class ProbRegressor(Protocol):
 |---|---|---|
 | Regressão linear bayesiana | Obrigatório | Forma fechada conjugada em NumPy |
 | Processo Gaussiano esparso (SVGP) | Obrigatório | GPyTorch |
-| Regressão bayesiana hierárquica Brasil → Região → Estado | Extra | PyMC ou NumPyro |
-
-A hierarquia é geográfica, não por indivíduo: com split por pessoa, quem está no teste nunca aparece no treino, e um efeito individual seria só uma amostra da priori.
 
 **Experimento central** (`src/amaprob/regression/propagation.py`):
 - **Plug-in:** imputa com a média da Parte 1 e prevê uma vez.
@@ -227,7 +224,7 @@ Subpacotes são criados quando o código da etapa é escrito, não antes.
 | 18–24/11 | Tabelas, figuras e artigo; resultados prontos para o acompanhamento de 19/11 |
 | 25–30/11 | Revisão e entrega (30/11); slides até 01/12 |
 
-Extras, em ordem de prioridade: busca aleatória na Parte 3 → regressão hierárquica → VAE.
+Extras, em ordem de prioridade: busca aleatória na Parte 3 → VAE.
 
 ---
 
@@ -248,3 +245,4 @@ Extras, em ordem de prioridade: busca aleatória na Parte 3 → regressão hier�
 - Mascarar também o treino (proposta: sim, mesmo protocolo em treino, validação e teste).
 - Gavetas ausentes no PPCA/FA: zeros observados ou condicionantes (proposta: condicionantes).
 - Adoção da métrica clínica de meia dose.
+- FA como segundo modelo da Parte 1: confirmar se é coberta pela disciplina; alternativas são GMM com EM ou VAE.
