@@ -35,7 +35,7 @@ A identificação dos alimentos (que, num sistema real, viria de imagens) está 
 
 **Unidade de análise — refeição:** itens da mesma pessoa, no mesmo dia, na mesma ocasião e no mesmo horário. Entram só refeições que pedem insulina: ocasiões 1 a 5 com pelo menos 10 g de carboidrato (304.670 refeições). Código em `src/amaprob/data/refeicoes.py`.
 
-**Gavetas (grupos alimentares):** derivadas da classificação do IBGE (20 grupos, 116 subgrupos), versionada em `configs/classificacao_ibge.csv`. O açúcar de mesa é gaveta própria. **Proposta em validação: K = 29** (Farinhas e massas dividida em subgrupos; Bebidas em 4 perfis nutricionais). Método e justificativa em `docs/piso-de-erro.md`.
+**Gavetas (grupos alimentares):** derivadas da classificação do IBGE (20 grupos, 116 subgrupos), versionada em `configs/classificacao_ibge.csv`. O açúcar de mesa é gaveta própria. **K = 29** (Farinhas e massas dividida em subgrupos; Bebidas em 4 perfis nutricionais). Método e justificativa em `docs/piso-de-erro.md`.
 
 **Representação** (para N refeições e K gavetas):
 
@@ -72,6 +72,7 @@ Violações destas regras invalidam o experimento. Sinalize imediatamente qualqu
 ## 4. Protocolo experimental
 
 - **Taxas de mascaramento:** `{0.0, 0.25, 0.5, 0.75, 1.0}` sobre as quantidades de gavetas **presentes**. A taxa 1.0 é o cenário "sei o que comi, não sei quanto".
+- **Conjuntos mascarados:** treino, validação e teste, com o mesmo protocolo.
 - **Mecanismo:** aleatório (MCAR), declarado como limitação. O mascaramento é por gaveta (esconde todos os itens dela de uma vez), também declarado.
 - **Repetições:** 3 sementes por taxa; reportar média e desvio.
 - **Split:** treino / validação / teste = 70/15/15 por `person_id`, semente 0 (`src/amaprob/data/splits.py`).
@@ -217,14 +218,14 @@ Subpacotes são criados quando o código da etapa é escrito, não antes.
 
 | Semana | Entrega |
 |---|---|
-| 21–27/10 | Máscaras persistidas + testes; baseline + regressão linear bayesiana em taxa 0.0 (pipeline de ponta a ponta) |
-| 28/10–03/11 | Parte 1: PPCA-EM e FA-EM em todas as taxas |
-| 04–10/11 | Parte 2: SVGP; plug-in vs. propagação em todas as taxas (**resultado principal**) |
-| 11–17/11 | Parte 3: otimização bayesiana; extras se houver folga |
-| 18–24/11 | Tabelas, figuras e artigo; resultados prontos para o acompanhamento de 19/11 |
-| 25–30/11 | Revisão e entrega (30/11); slides até 01/12 |
+| 02–08/11 | Confirmar com o professor se a FA é coberta pela disciplina; `pytest`; máscaras persistidas + testes (máscaras, split); baseline + regressão linear bayesiana + métricas em taxa 0.0 (pipeline de ponta a ponta); Parte 1: PPCA-EM em todas as taxas |
+| 09–15/11 | Parte 1: FA-EM (reaproveita o PPCA-EM); Parte 2: SVGP; plug-in vs. propagação em todas as taxas (**resultado principal**); definir o número de amostras da propagação |
+| 16–22/11 | Parte 3: otimização bayesiana; resultados parciais prontos para o acompanhamento de 19/11; início do artigo |
+| 23–30/11 | Tabelas, figuras, artigo, revisão e entrega (30/11); slides até 01/12 |
 
-Extras, em ordem de prioridade: busca aleatória na Parte 3 → VAE.
+Depois do pipeline de ponta a ponta, as Partes 1 e 2 podem avançar em paralelo, porque os modelos dependem só dos contratos.
+
+Extras, só se houver folga na semana de 16–22/11: busca aleatória na Parte 3 → VAE (manutenção do VAE a decidir; ver seção 12).
 
 ---
 
@@ -241,8 +242,7 @@ Extras, em ordem de prioridade: busca aleatória na Parte 3 → VAE.
 
 ## 12. Decisões em aberto
 
-- K = 29 gavetas (proposta em validação; `docs/piso-de-erro.md`).
-- Mascarar também o treino (proposta: sim, mesmo protocolo em treino, validação e teste).
 - Gavetas ausentes no PPCA/FA: zeros observados ou condicionantes (proposta: condicionantes).
 - Adoção da métrica clínica de meia dose.
 - FA como segundo modelo da Parte 1: confirmar se é coberta pela disciplina; alternativas são GMM com EM ou VAE.
+- VAE como extra: manter ou retirar do escopo, dado o cronograma revisado.
