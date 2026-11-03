@@ -218,7 +218,7 @@ Subpacotes são criados quando o código da etapa é escrito, não antes.
 
 | Semana | Entrega |
 |---|---|
-| 02–08/11 | Confirmar com o professor se a FA é coberta pela disciplina; `pytest`; máscaras persistidas + testes (máscaras, split); baseline + regressão linear bayesiana + métricas em taxa 0.0 (pipeline de ponta a ponta); Parte 1: PPCA-EM em todas as taxas |
+| 02–08/11 | `pytest`; máscaras persistidas + testes (máscaras, split); baseline + regressão linear bayesiana + métricas em taxa 0.0 (pipeline de ponta a ponta); Parte 1: PPCA-EM em todas as taxas |
 | 09–15/11 | Parte 1: FA-EM (reaproveita o PPCA-EM); Parte 2: SVGP; plug-in vs. propagação em todas as taxas (**resultado principal**); definir o número de amostras da propagação |
 | 16–22/11 | Parte 3: otimização bayesiana; resultados parciais prontos para o acompanhamento de 19/11; início do artigo |
 | 23–30/11 | Tabelas, figuras, artigo, revisão e entrega (30/11); slides até 01/12 |
@@ -244,5 +244,4 @@ Extras, só se houver folga na semana de 16–22/11: busca aleatória na Parte 3
 
 - Gavetas ausentes no PPCA/FA: zeros observados ou condicionantes (proposta: condicionantes).
 - Adoção da métrica clínica de meia dose.
-- FA como segundo modelo da Parte 1: confirmar se é coberta pela disciplina; alternativas são GMM com EM ou VAE.
 - VAE como extra: manter ou retirar do escopo, dado o cronograma revisado.
