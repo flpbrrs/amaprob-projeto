@@ -204,7 +204,8 @@ Subpacotes são criados quando o código da etapa é escrito, não antes.
 - Toda função aleatória recebe `rng` ou semente explícita.
 - Testes obrigatórios para: geração de máscaras (`M ⊆ P`, taxa correta), split por indivíduo (nenhum `person_id` em dois conjuntos), métricas (casos conhecidos) e ausência de leitura de `X[M]` na imputação.
 - Comece pelo caso mais simples que valide o pipeline de ponta a ponta (baseline + regressão linear bayesiana em taxa 0.0) antes de sofisticar.
-- Prefira implementar PPCA-EM, FA-EM e a regressão linear bayesiana do zero, com derivação comentada: fazem parte do aprendizado da disciplina.
+- PPCA-EM e FA-EM são implementados do zero, com derivação comentada. Motivo: as versões prontas (`PCA` e `FactorAnalysis` do scikit-learn) não aceitam dados faltantes, e imputar as quantidades de `M` exige estimar o modelo com as entradas ausentes. O EM com faltantes faz exatamente isso: no passo E, condiciona cada refeição só nas gavetas observadas. Também fazem parte do aprendizado da disciplina.
+- Prefira implementar a regressão linear bayesiana do zero, em forma fechada, com derivação comentada.
 
 **Escrita:**
 - Comentários, docstrings e documentação em tom neutro e impessoal: sem nomes de pessoas, datas de decisão ou atribuições.
