@@ -1,6 +1,6 @@
 # Piso de erro: quantas gavetas usar?
 
-> Status: **proposta em validação**. Código: `src/amaprob/experiments/piso_de_erro.py`. Resultados: `results/piso_de_erro_*.csv`.
+> Status: **adotada** (K = 29, configuração em `src/amaprob/data/gavetas.py`). Código: `src/amaprob/experiments/piso_de_erro.py`. Resultados: `results/piso_de_erro_*.csv`.
 
 ## A pergunta
 

@@ -14,6 +14,23 @@ import pandas as pd
 COD_ACUCAR = 6906602
 GAVETA_ACUCAR = "Açúcar"
 
+# Configuração adotada (K = 29), justificada em docs/piso-de-erro.md: divide os dois grupos de
+# maior ganho no piso de erro e junta as bebidas por perfil nutricional, em vez de usar os 14
+# subgrupos do IBGE. Uso: montar_gavetas(classificacao, DIVIDIR_K29, FUNDIR_K29).
+DIVIDIR_K29 = {"Bebidas", "Farinhas e massas"}
+FUNDIR_K29 = {
+    **dict.fromkeys(
+        ["Água", "Café", "Chá", "Refrigerantes diet/light", "Refrescos/sucos industrializados diet/light", "Destiladas"],
+        "Bebidas / sem açúcar",
+    ),
+    **dict.fromkeys(
+        ["Sucos", "Refrescos/sucos industrializados", "Refrigerantes", "Outras bebidas não-alcoólicas", "Bebidas à base de soja"],
+        "Bebidas / açucaradas",
+    ),
+    "Bebidas lácteas": "Bebidas / lácteas",
+    **dict.fromkeys(["Cerveja", "Vinho"], "Bebidas / cerveja e vinho"),
+}
+
 
 def ler_classificacao_ibge(path: Path) -> pd.DataFrame:
     """Lê a planilha de classificação do IBGE. Requer openpyxl: `uv run --with openpyxl`.

@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from amaprob.data.gavetas import montar_gavetas
+from amaprob.data.gavetas import DIVIDIR_K29, FUNDIR_K29, montar_gavetas
 from amaprob.data.pof import read_consumo_alimentar
 from amaprob.data.refeicoes import gramas_por_gaveta, montar_itens_de_refeicao
 from amaprob.data.splits import TREINO, VALIDACAO, dividir_por_pessoa
@@ -24,22 +24,6 @@ SEED_SPLIT = 0
 # Meia unidade de insulina com relação 1 U : 15 g, erro tratado como aceitável em estudo da
 # Roche (fonte a verificar). A relação real varia de paciente para paciente.
 TOLERANCIA_MEIA_DOSE_G = 7.5
-
-# Proposta enxuta (~30 gavetas): divide os dois grupos de maior ganho no ranking, mas junta as
-# bebidas por perfil nutricional em vez de usar os 14 subgrupos do IBGE.
-PROPOSTA_DIVIDIR = {"Bebidas", "Farinhas e massas"}
-PROPOSTA_FUNDIR = {
-    **dict.fromkeys(
-        ["Água", "Café", "Chá", "Refrigerantes diet/light", "Refrescos/sucos industrializados diet/light", "Destiladas"],
-        "Bebidas / sem açúcar",
-    ),
-    **dict.fromkeys(
-        ["Sucos", "Refrescos/sucos industrializados", "Refrigerantes", "Outras bebidas não-alcoólicas", "Bebidas à base de soja"],
-        "Bebidas / açucaradas",
-    ),
-    "Bebidas lácteas": "Bebidas / lácteas",
-    **dict.fromkeys(["Cerveja", "Vinho"], "Bebidas / cerveja e vinho"),
-}
 
 
 def avaliar_regra_linear(itens: pd.DataFrame, conjunto: pd.Series) -> dict:
@@ -84,7 +68,7 @@ def main() -> None:
     for i in range(1, len(ranking) + 1):
         divididos = ranking.grupo[:i].tolist()
         curva.append({"grupos_divididos": " | ".join(divididos), **com_gavetas(set(divididos))})
-    curva.append({"grupos_divididos": "PROPOSTA: Bebidas (4 perfis) | Farinhas e massas", **com_gavetas(PROPOSTA_DIVIDIR, PROPOSTA_FUNDIR)})
+    curva.append({"grupos_divididos": "PROPOSTA: Bebidas (4 perfis) | Farinhas e massas", **com_gavetas(DIVIDIR_K29, FUNDIR_K29)})
     curva = pd.DataFrame(curva)
 
     saida = RAIZ / "results"

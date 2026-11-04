@@ -30,12 +30,28 @@ Os microdados **não** são versionados. Cada pessoa baixa direto do IBGE para `
 
 Resultado esperado: `data/raw/pof2017_2018/Dados_20230713/CONSUMO_ALIMENTAR.txt`.
 
+Com os microdados no lugar, prepare o dataset de refeições e as máscaras (cerca de 30 s):
+
+```bash
+uv run python -m amaprob.data.dataset
+```
+
+O comando grava `data/processed/refeicoes_k29.npz` (gramas, presença, carboidrato, identificadores e conjunto do split) e `data/processed/mascaras_k29.npz` (quantidades ocultas por taxa e semente). O mecanismo de mascaramento está descrito em [`docs/mascaramento.md`](docs/mascaramento.md).
+
 ```
 data/
 ├── raw/         # microdados POF, como baixados do IBGE
 ├── interim/     # tabelas lidas
-└── processed/   # X, P, C, y, person_id, máscaras, splits
+└── processed/   # dataset de refeições e máscaras (.npz)
 ```
+
+## Testes
+
+```bash
+uv run pytest
+```
+
+Os testes de máscaras, split, gavetas e persistência usam dados sintéticos ou a classificação versionada e rodam sem os microdados. Os testes sobre os arquivos de `data/processed/` são pulados quando eles não existem.
 
 ## Estrutura
 
