@@ -225,7 +225,7 @@ Subpacotes são criados quando o código da etapa é escrito, não antes.
 
 Depois do pipeline de ponta a ponta, as Partes 1 e 2 podem avançar em paralelo, porque os modelos dependem só dos contratos.
 
-Extras, só se houver folga na semana de 16–22/11: busca aleatória na Parte 3 → VAE (manutenção do VAE a decidir; ver seção 12).
+Escopo: só o mínimo descrito nas seções 5 a 7. Os extras (VAE, busca aleatória e análises adicionais) ficam suspensos e só voltam à discussão se houver folga.
 
 ---
 
@@ -244,4 +244,3 @@ Extras, só se houver folga na semana de 16–22/11: busca aleatória na Parte 3
 
 - Gavetas ausentes no PPCA/FA: zeros observados ou condicionantes (proposta: condicionantes).
 - Adoção da métrica clínica de meia dose.
-- VAE como extra: manter ou retirar do escopo, dado o cronograma revisado.
