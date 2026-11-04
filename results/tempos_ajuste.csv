@@ -1,0 +1,5 @@
+modelo,etapa,segundos
+minimos_quadrados,ajuste no treino,0.6310110999984317
+blr,ajuste no treino,0.24177609999969718
+porcao_media,"ajuste no treino (taxa 0,5, semente 0)",0.11419589999786695
+porcao_media,100 amostras para a validação,0.3406678999963333

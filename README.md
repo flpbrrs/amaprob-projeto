@@ -45,6 +45,14 @@ data/
 └── processed/   # dataset de refeições e máscaras (.npz)
 ```
 
+## Experimentos
+
+```bash
+uv run python -m amaprob.experiments.taxa_zero   # teste de sanidade na taxa 0 (segundos)
+```
+
+Ajusta a regressão linear bayesiana no treino, mede na validação e grava em `results/` as métricas (`taxa_zero_metricas.csv`), a cobertura por faixa da previsão (`taxa_zero_cobertura.csv`) e os tempos de ajuste (`tempos_ajuste.csv`). O conjunto de teste não é lido.
+
 ## Testes
 
 ```bash

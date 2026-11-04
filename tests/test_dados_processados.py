@@ -35,6 +35,12 @@ def test_dimensoes_e_presenca(refeicoes):
     assert (refeicoes.y >= 10).all()
 
 
+def test_contexto(refeicoes):
+    assert refeicoes.C.shape == (304_670, 13)
+    assert len(refeicoes.C_nomes) == 13
+    assert np.isfinite(refeicoes.C).all()
+
+
 def test_pessoas_por_conjunto(refeicoes):
     conjunto_por_pessoa = pd.Series(refeicoes.conjunto).groupby(refeicoes.person_id).nunique()
     assert (conjunto_por_pessoa == 1).all()

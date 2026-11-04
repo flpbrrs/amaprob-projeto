@@ -1,8 +1,9 @@
 """Dataset de refeições e máscaras persistidos em data/processed/ (Regras 3 e 4).
 
 Dois arquivos .npz, lidos sem pickle:
-- refeicoes_k29.npz: G (gramas por gaveta), P (presença), y (carboidrato), meal_id, person_id,
-  conjunto (treino/validacao/teste) e nomes das gavetas, todos na mesma ordem de linhas;
+- refeicoes_k29.npz: G (gramas por gaveta), P (presença), C (contexto) e nomes das suas colunas,
+  y (carboidrato), meal_id, person_id, conjunto (treino/validacao/teste) e nomes das gavetas,
+  todos na mesma ordem de linhas;
 - mascaras_k29.npz: M (sementes × taxas × N × K), taxas, sementes, meal_id e gavetas.
 
 As máscaras ficam em arquivo próprio para que o dataset possa ser regravado (por exemplo, com o
@@ -29,6 +30,17 @@ ARQUIVO_REFEICOES = RAIZ / "data/processed/refeicoes_k29.npz"
 ARQUIVO_MASCARAS = RAIZ / "data/processed/mascaras_k29.npz"
 SEED_SPLIT = 0
 
+# Contexto C: só campos do arquivo de consumo alimentar.
+OCASIOES = {1: "cafe", 2: "almoco", 3: "lanche", 4: "jantar", 5: "ceia"}  # V9017
+REGIOES = {1: "norte", 2: "nordeste", 3: "sudeste", 4: "sul", 5: "centro_oeste"}  # 1º dígito da UF
+C_NOMES = (
+    *(f"ocasiao_{nome}" for nome in OCASIOES.values()),
+    "hora_sen",
+    "hora_cos",
+    *(f"regiao_{nome}" for nome in REGIOES.values()),
+    "log_renda",
+)
+
 
 @dataclass(frozen=True)
 class Refeicoes:
@@ -36,6 +48,8 @@ class Refeicoes:
 
     G: np.ndarray  # (N, K) gramas por gaveta, sem transformação
     P: np.ndarray  # (N, K) bool, gaveta presente na refeição
+    C: np.ndarray  # (N, d) contexto: ocasião, hora cíclica, macrorregião, log da renda
+    C_nomes: np.ndarray  # (d,) nomes das colunas de C
     y: np.ndarray  # (N,) carboidrato total da refeição (g)
     meal_id: np.ndarray  # (N,)
     person_id: np.ndarray  # (N,) texto
@@ -52,6 +66,25 @@ class Mascaras:
     sementes: np.ndarray  # (S,)
 
 
+def codificar_hora(v9015: pd.Series) -> np.ndarray:
+    """Hora cheia ("12H") como ponto no círculo (seno, cosseno de 2π·h/24): 23H fica perto de 0H."""
+    angulo = 2 * np.pi * v9015.str.rstrip("H").astype(int).to_numpy() / 24
+    return np.c_[np.sin(angulo), np.cos(angulo)]
+
+
+def montar_contexto(por_refeicao: pd.DataFrame) -> np.ndarray:
+    """Matriz C (N × 13), uma linha por refeição, na ordem de C_NOMES.
+
+    Ocasião e macrorregião viram indicadoras completas (sem categoria de referência); com prior
+    gaussiano na regressão, a colinearidade com o intercepto não impede o ajuste. A renda
+    (constante por pessoa) entra como log1p, com valores negativos levados a 0.
+    """
+    ocasiao = por_refeicao.V9017.to_numpy()[:, None] == np.array(list(OCASIOES))
+    regiao = (por_refeicao.UF.to_numpy() // 10)[:, None] == np.array(list(REGIOES))
+    renda = np.log1p(np.clip(por_refeicao.RENDA_TOTAL.to_numpy(dtype=np.float64), 0, None))
+    return np.c_[ocasiao, codificar_hora(por_refeicao.V9015), regiao, renda].astype(np.float64)
+
+
 def montar_refeicoes(consumo: pd.DataFrame, gavetas: pd.Series) -> Refeicoes:
     """Monta as matrizes por refeição a partir dos itens da POF e de um mapeamento V9001 → gaveta."""
     itens = montar_itens_de_refeicao(consumo, gavetas)
@@ -60,9 +93,13 @@ def montar_refeicoes(consumo: pd.DataFrame, gavetas: pd.Series) -> Refeicoes:
     person_id = por_refeicao.person_id.first().loc[G.index]
     # Presença pelos itens, não pelas gramas: uma gaveta com item de 0 g continua presente.
     contagem = pd.crosstab(itens.meal_id, itens.gaveta).reindex(index=G.index, columns=G.columns, fill_value=0)
+    # Ocasião e hora são constantes na refeição por definição; UF e renda, por pessoa.
+    primeiro = por_refeicao[["V9017", "V9015", "UF", "RENDA_TOTAL"]].first().loc[G.index]
     return Refeicoes(
         G=G.to_numpy(dtype=np.float64),
         P=contagem.to_numpy() > 0,
+        C=montar_contexto(primeiro),
+        C_nomes=np.array(C_NOMES),
         y=por_refeicao.CHOTOT.sum().loc[G.index].to_numpy(dtype=np.float64),
         meal_id=G.index.to_numpy(dtype=np.int64),
         person_id=person_id.to_numpy(dtype=str),

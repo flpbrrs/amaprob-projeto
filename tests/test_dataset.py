@@ -7,10 +7,12 @@ import pandas as pd
 import pytest
 
 from amaprob.data.dataset import (
+    C_NOMES,
     Mascaras,
     Refeicoes,
     carregar_mascaras,
     carregar_refeicoes,
+    codificar_hora,
     montar_refeicoes,
     salvar_mascaras,
     salvar_refeicoes,
@@ -20,11 +22,16 @@ from amaprob.data.mascaras import SEMENTES, TAXAS, gerar_mascaras
 GAVETAS = pd.Series({1: "X", 2: "Y", 3: "Z"}, name="gaveta")
 
 
+UF_RENDA = {1: (23, 1000.0), 2: (35, -5.0), 3: (43, 500.0)}  # Ceará (NE), São Paulo (SE), RS (S)
+
+
 def _item(pessoa, quadro, ocasiao, hora, codigo, gramas, carbo):
     upa, dom, uc, inf = pessoa
+    uf, renda = UF_RENDA[upa]
     return {
         "COD_UPA": upa, "NUM_DOM": dom, "NUM_UC": uc, "COD_INFORMANTE": inf, "QUADRO": quadro,
         "V9017": ocasiao, "V9015": hora, "V9001": codigo, "QTD": gramas, "CHOTOT": carbo,
+        "UF": uf, "RENDA_TOTAL": renda,
     }
 
 
@@ -57,6 +64,27 @@ def test_montagem(refeicoes):
     assert refeicoes.conjunto[0] == refeicoes.conjunto[1]
 
 
+def test_contexto(refeicoes):
+    C = pd.DataFrame(refeicoes.C, columns=refeicoes.C_nomes)
+    assert C.shape == (3, 13) and list(C.columns) == list(C_NOMES)
+    assert not C.isna().any().any()
+    ocasioes = C.filter(like="ocasiao_")
+    regioes = C.filter(like="regiao_")
+    # Refeição 1: almoço de pessoa do Nordeste.
+    assert ocasioes.iloc[0].to_dict() == {"ocasiao_cafe": 0, "ocasiao_almoco": 1, "ocasiao_lanche": 0,
+                                          "ocasiao_jantar": 0, "ocasiao_ceia": 0}
+    assert regioes.iloc[0].to_dict() == {"regiao_norte": 0, "regiao_nordeste": 1, "regiao_sudeste": 0,
+                                         "regiao_sul": 0, "regiao_centro_oeste": 0}
+    assert (ocasioes.sum(axis=1) == 1).all() and (regioes.sum(axis=1) == 1).all()
+    np.testing.assert_allclose(C.log_renda, [np.log1p(1000), np.log1p(1000), 0.0])  # renda negativa -> 0
+    np.testing.assert_allclose(C[["hora_sen", "hora_cos"]].iloc[0], [0.0, -1.0], atol=1e-12)  # 12H
+
+
+def test_hora_ciclica():
+    h = codificar_hora(pd.Series(["23H", "0H", "11H", "12H"]))
+    assert np.isclose(np.linalg.norm(h[0] - h[1]), np.linalg.norm(h[2] - h[3]))
+
+
 def test_ida_e_volta_do_dataset(refeicoes, tmp_path):
     salvar_refeicoes(refeicoes, tmp_path / "r.npz")
     carregado = carregar_refeicoes(tmp_path / "r.npz")
@@ -81,8 +109,11 @@ def test_ida_e_volta_das_mascaras(refeicoes, arquivo_mascaras):
 
 def test_desalinhamento_por_ordem(refeicoes, arquivo_mascaras):
     _, path = arquivo_mascaras
-    invertido = Refeicoes(**{c.name: getattr(refeicoes, c.name)[::-1] for c in fields(Refeicoes) if c.name != "gavetas"},
-                          gavetas=refeicoes.gavetas)
+    por_coluna = {"gavetas", "C_nomes"}  # campos que não são por linha
+    invertido = Refeicoes(
+        **{c.name: getattr(refeicoes, c.name)[::-1] for c in fields(Refeicoes) if c.name not in por_coluna},
+        **{nome: getattr(refeicoes, nome) for nome in por_coluna},
+    )
     with pytest.raises(ValueError, match="meal_id"):
         carregar_mascaras(invertido, path)
 

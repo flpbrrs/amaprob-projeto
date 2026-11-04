@@ -44,7 +44,7 @@ A identificação dos alimentos (que, num sistema real, viria de imagens) está 
 | `X` | N × K | `log1p(gramas)` por gaveta; 0 quando a gaveta está ausente |
 | `P` | N × K | presença da gaveta (0/1) — **sempre observada** |
 | `M` | N × K | máscara de quantidades ocultas; `M ⊆ P` |
-| `C` | N × d | contexto: ocasião, horário, região/UF, renda; sexo e idade vêm do arquivo `MORADOR` (a verificar) |
+| `C` | N × 13 | contexto, só do arquivo de consumo alimentar: ocasião (5 indicadoras), hora (seno e cosseno), macrorregião (5 indicadoras) e `log1p` da renda. Sexo e idade (arquivo `MORADOR`, a verificar) ficam fora |
 | `y` | N | carboidrato total da refeição (g) |
 | `person_id` | N | identificador do indivíduo (split) |
 
@@ -117,12 +117,12 @@ class Imputer(Protocol):
 
 ```python
 class ProbRegressor(Protocol):
-    def fit(self, Z: np.ndarray, y: np.ndarray, groups: np.ndarray | None = None) -> "ProbRegressor": ...
-    def predict_samples(self, Z: np.ndarray, n_samples: int, rng: np.random.Generator) -> np.ndarray:
-        """Retorna (n_samples, N) da preditiva."""
+    def fit(self, Z: np.ndarray, y: np.ndarray) -> "ProbRegressor": ...
+    def predict(self, Z: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Média e variância da preditiva gaussiana, cada uma de forma (N,)."""
 ```
 
-`Z` = concatenação de quantidades em gramas (observadas ou imputadas), `P` e `C`.
+`Z` = concatenação de quantidades em gramas (observadas ou imputadas), `P` e `C` (`montar_Z`). A preditiva gaussiana por refeição dá a NLL exata; na propagação, as S amostras da imputação geram a mistura `(1/S) Σ N(μ_s, σ²_s)`.
 
 **Modelos:**
 
@@ -139,7 +139,9 @@ Hipótese: a propagação produz intervalos calibrados; o plug-in subestima a in
 
 **Leitura esperada:** com taxa 0.0, erro próximo do piso (~8 g com K = 29; teste de sanidade). Com o aumento da taxa, a largura do intervalo cresce de forma calibrada. **Essa curva é o resultado principal.**
 
-**Métricas:** MAE, NLL, CRPS (via `properscoring` sobre amostras), cobertura do intervalo de 90% (PICP), largura média do intervalo (MPIW). Proposta de métrica clínica: % de refeições com erro de até 7,5 g (meia unidade de insulina com relação 1 U : 15 g; fonte a verificar).
+**Métricas** (`src/amaprob/evaluation/metricas.py`): MAE, NLL, CRPS (`scoringrules`), cobertura do intervalo de 90% (PICP), largura média do intervalo (MPIW) e cobertura por quintil da previsão. Métrica clínica secundária: % de refeições com erro de até 7,5 g (meia unidade de insulina com relação 1 U : 15 g; fonte a verificar).
+
+**Resultado da taxa 0** (validação, `experiments/taxa_zero.py`): MAE de 7,87 g, PICP de 93,1% e MPIW de 45,4 g. A cobertura vai de 97,6% nas refeições pequenas a 84,1% nas grandes (caudas pesadas; ver §11). Por isso, a curva de calibração é lida em relação à PICP da taxa 0, e não só em relação a 90%.
 
 ---
 
@@ -237,11 +239,11 @@ Escopo: só o mínimo descrito nas seções 5 a 7. Os extras (VAE, busca aleató
 - **Gramas estimadas, não pesadas:** as gramas da POF vêm de medidas caseiras convertidas por tabela, com porções em degraus. Os modelos aprendem, em parte, essa conversão (ver Regra 1).
 - **População geral:** a POF não é uma amostra de pessoas com diabetes tipo 1 — limitação de validade externa.
 - **Modelos sofisticados podem não superar o baseline** em precisão; o foco do trabalho é a calibração da incerteza.
-- **Escala:** subamostrar quando necessário; treino em CPU.
+- **Escala:** subamostrar quando necessário; treino em CPU. Amostras da imputação ocupam S × N × K valores (100 amostras de toda a validação ≈ 1 GB): amostrar e prever em blocos de refeições.
+- **Caudas pesadas no erro da regressão:** o resíduo na taxa 0 tem curtose em excesso de ~30, e o ruído gaussiano homocedástico cobre demais as refeições pequenas e de menos as grandes. Mitigação: cobertura por faixa reportada e leitura relativa à taxa 0. O modelo de ruído alternativo está em `backlog/decisions.md`.
 
 ---
 
 ## 12. Decisões em aberto
 
 - Gavetas ausentes no PPCA/FA: zeros observados ou condicionantes (proposta: condicionantes).
-- Adoção da métrica clínica de meia dose.

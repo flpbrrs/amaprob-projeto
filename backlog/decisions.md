@@ -12,3 +12,17 @@ Complexidade que ficou de fora de propósito e que só deve voltar quando aparec
 As duas condições valem nos microdados da versão 20230713: `V9015` não tem nulos e os 1.593 códigos da classificação cobrem todos os itens. A spec `refeicoes` registra essas condições como pré-condições, não como comportamento garantido.
 
 **Quando voltar:** em uma troca de versão dos microdados, de classificação ou de fonte de dados. Nesse caso, a montagem deve falhar com erro explícito em vez de produzir refeições inválidas sem aviso.
+
+## Modelo de ruído da regressão com caudas pesadas ou variância crescente
+
+A regressão linear bayesiana usa ruído gaussiano homocedástico (uma variância única para todas as refeições). Na taxa 0 (validação), o resíduo tem curtose em excesso de ~30 (0 numa gaussiana) e MAE/desvio de 0,58 (0,80 numa gaussiana). O intervalo de 90% cobre 93,1% no total, mas vai de 97,6% nas refeições com menor previsão a 84,1% nas maiores (`results/taxa_zero_cobertura.csv`).
+
+Alternativas adiadas:
+
+- **Verossimilhança t de Student:** caudas pesadas, mas sem forma fechada; pede inferência variacional ou MCMC (cadeias de Markov via Monte Carlo).
+- **Variância que cresce com a refeição** (por exemplo, proporcional à previsão ou ao número de gavetas): também sem forma fechada.
+- **Transformar o alvo** (raiz ou log do carboidrato): quebra a relação quase linear entre gramas e carboidrato.
+
+**Por que ficou de fora:** plug-in e propagação dividem o mesmo modelo de ruído, então a comparação entre eles continua justa. A falha de calibração da taxa 0 é medida e reportada, e a curva é lida em relação a ela.
+
+**Quando voltar:** se a curva plug-in × propagação ficar ambígua por causa da referência da taxa 0, ou se o SVGP mostrar cobertura por faixa muito diferente da regressão linear bayesiana.
