@@ -26,3 +26,11 @@ Alternativas adiadas:
 **Por que ficou de fora:** plug-in e propagação dividem o mesmo modelo de ruído, então a comparação entre eles continua justa. A falha de calibração da taxa 0 é medida e reportada, e a curva é lida em relação a ela.
 
 **Quando voltar:** se a curva plug-in × propagação ficar ambígua por causa da referência da taxa 0, ou se o SVGP mostrar cobertura por faixa muito diferente da regressão linear bayesiana.
+
+## Regra do IBGE para os gramas de açúcar adicionado
+
+Na POF, o informante só diz se adicionou açúcar (sim ou não); os gramas foram estimados depois pelo IBGE, com uma regra que a documentação dos microdados não descreve (ver `AGENTS.md` §2). Assim, a parte do açúcar no carboidrato da refeição (`y`) e na gaveta de açúcar é uma estimativa, não uma medida declarada.
+
+**Por que ficou de fora:** declarar a limitação no artigo basta enquanto ela não afetar a conclusão. Reconstituir a regra (cruzando os gramas de açúcar com o alimento e a quantidade a que ele foi adicionado) não muda nenhum modelo.
+
+**Quando voltar:** se o erro de imputação da gaveta de açúcar destoar muito das outras gavetas (uma regra fixa deixaria o açúcar fácil demais de prever), ou se a conclusão plug-in × propagação mudar quando a gaveta de açúcar sai da análise.

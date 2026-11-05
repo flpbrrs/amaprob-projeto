@@ -50,9 +50,9 @@ A identificação dos alimentos (que, num sistema real, viria de imagens) está 
 
 **Escala log só na imputação.** A imputação trabalha em `log1p(gramas)`; a regressão recebe as quantidades de volta em gramas. Motivo: o carboidrato é quase linear nas gramas (R² de 0,81 em gramas contra 0,58 em log, com 20 grupos e regressão linear).
 
-**A verificar:**
-- `QUADRO` 72 e 73 = dia 1 e dia 2 de registro;
-- regra usada pelo IBGE para estimar os gramas do açúcar adicionado (146 valores distintos, concentrados em 5, 20 e 30 g).
+**Fatos da coleta** (Manual do Agente de Pesquisa da POF 2017–2018, em `Documentacao_20230713/`):
+- `QUADRO` 72 e 73 são o primeiro e o segundo dia recordado, com pelo menos um dia de intervalo (p. 304).
+- **Açúcar adicionado é estimativa do IBGE:** na coleta só se marca se houve adição (sim ou não), sem quantidade (p. 312 e 314); os gramas foram estimados depois (dicionário, `V9001`). A regra da estimativa não está documentada (146 valores distintos, concentrados em 5, 20 e 30 g). O artigo declara isso como limitação; ver `backlog/decisions.md`.
 
 ---
 
