@@ -139,7 +139,7 @@ Hipótese: a propagação produz intervalos calibrados; o plug-in subestima a in
 
 **Leitura esperada:** com taxa 0.0, erro próximo do piso (~8 g com K = 29; teste de sanidade). Com o aumento da taxa, a largura do intervalo cresce de forma calibrada. **Essa curva é o resultado principal.**
 
-**Métricas** (`src/amaprob/evaluation/metricas.py`): MAE, NLL, CRPS (`scoringrules`), cobertura do intervalo de 90% (PICP), largura média do intervalo (MPIW) e cobertura por quintil da previsão. Métrica clínica secundária: % de refeições com erro de até 7,5 g (meia unidade de insulina com relação 1 U : 15 g; fonte a verificar).
+**Métricas** (`src/amaprob/evaluation/metricas.py`): MAE, NLL, CRPS (`scoringrules`), cobertura do intervalo de 90% (PICP), largura média do intervalo (MPIW) e cobertura por quintil da previsão. Métrica clínica secundária: % de refeições com erro de até 7,5 g (meia unidade de insulina com relação 1 U : 15 g, o passo de uma caneta comum; justificativa em `docs/piso-de-erro.md`).
 
 **Resultado da taxa 0** (validação, `experiments/taxa_zero.py`): MAE de 7,87 g, PICP de 93,1% e MPIW de 45,4 g. A cobertura vai de 97,6% nas refeições pequenas a 84,1% nas grandes (caudas pesadas; ver §11). Por isso, a curva de calibração é lida em relação à PICP da taxa 0, e não só em relação a 90%.
 

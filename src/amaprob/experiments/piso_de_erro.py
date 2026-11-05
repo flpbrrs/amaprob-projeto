@@ -21,8 +21,8 @@ from amaprob.data.splits import TREINO, VALIDACAO, dividir_por_pessoa
 
 RAIZ = Path(__file__).resolve().parents[3]
 SEED_SPLIT = 0
-# Meia unidade de insulina com relação 1 U : 15 g, erro tratado como aceitável em estudo da
-# Roche (fonte a verificar). A relação real varia de paciente para paciente.
+# Meia unidade de insulina com relação 1 U : 15 g, o passo de uma caneta comum (ver
+# docs/piso-de-erro.md). A relação real varia de paciente para paciente.
 TOLERANCIA_MEIA_DOSE_G = 7.5
 
 

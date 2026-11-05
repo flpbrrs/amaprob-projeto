@@ -103,7 +103,7 @@ O argumento 2 é um raciocínio, ainda não uma medição. Ele pode ser verifica
 
 ## Critério de meia dose
 
-Com a relação típica de 1 unidade de insulina para 15 g de carboidrato, meia unidade equivale a 7,5 g. Um estudo da Roche trata a meia dose como erro aceitável (**fonte a verificar**). Observações:
+Com a relação típica de 1 unidade de insulina para 15 g de carboidrato, meia unidade equivale a 7,5 g. Meia unidade é o passo de dose de uma caneta de insulina comum, e é com esse passo que simulações in silico arredondam as doses de bolus (Herrero et al., *Diabetes Technology & Therapeutics*, 2026, [doi:10.1177/15209156261432144](https://doi.org/10.1177/15209156261432144)). Um erro de até 7,5 g na estimativa de carboidrato corresponde, assim, a no máximo um passo da caneta. Observações:
 
 - A relação insulina:carboidrato varia de paciente para paciente, então 7,5 g é uma referência, não um limite universal.
 - Mesmo com todas as gramas conhecidas, a regra linear com 29 gavetas acerta dentro da meia dose em 67% das refeições. A meia dose funciona melhor como **métrica de avaliação** ("% de refeições dentro da meia dose") do que como meta de erro médio.

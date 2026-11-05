@@ -6,7 +6,7 @@
   observado, na unidade do alvo; reduz-se ao erro absoluto quando a previsão é determinística.
 - PICP (cobertura) e MPIW (largura média) do intervalo central de 90%.
 - Percentual de meia dose: refeições com erro de até 7,5 g, meia unidade de insulina na relação
-  1 U : 15 g (referência clínica a verificar).
+  1 U : 15 g, o passo de uma caneta comum (ver docs/piso-de-erro.md).
 """
 
 from statistics import NormalDist
