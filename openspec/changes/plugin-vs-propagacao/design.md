@@ -99,6 +99,8 @@ Antes da curva, a propagação roda com S = 100 e S = 500 na taxa 0,5 e semente 
    - `results/propagacao_S.csv`;
    - `results/figuras/propagacao_picp.png` e `propagacao_mpiw.png`: uma linha por braço, barras de desvio entre as sementes, linhas horizontais em 90% e na PICP da taxa 0.
 
+As figuras usam `plotnine` com o tema comum `evaluation/tema.TEMA` (fonte Roboto Condensed de `assets/fonts/`), o mesmo para todos os experimentos do projeto. Alternativa descartada: `matplotlib` direto, com estilo repetido em cada script.
+
 Tempo esperado: dezenas de segundos por taxa e semente com S = 100; a comparação com S = 500 domina pelo CRPS O(S²).
 
 ### 9. Organização do código
@@ -107,6 +109,7 @@ Tempo esperado: dezenas de segundos por taxa e semente com S = 100; a comparaç�
 src/amaprob/
   regression/  propagation.py  (amostras_em_gramas, prever_bracos, imputar_treino_cruzado)
   evaluation/  metricas.py     (+ avaliar_mistura, intervalo, por_ocultas)
+               tema.py         (TEMA e CORES das figuras)
   experiments/ propagacao.py
 ```
 
@@ -122,5 +125,5 @@ src/amaprob/
 
 ## Migration Plan
 
-1. `uv add matplotlib scipy` e `uv sync`.
+1. `uv add matplotlib scipy plotnine` e `uv sync`.
 2. Nenhum dado é regravado: o experimento lê `data/processed/` como está.

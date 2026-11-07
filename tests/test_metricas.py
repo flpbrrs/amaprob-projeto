@@ -3,7 +3,16 @@
 import numpy as np
 import pytest
 
-from amaprob.evaluation.metricas import Z_INTERVALO, avaliar, cobertura_por_faixa
+from scipy.special import ndtr
+
+from amaprob.evaluation.metricas import (
+    Z_INTERVALO,
+    avaliar,
+    avaliar_mistura,
+    cobertura_por_faixa,
+    intervalo,
+    por_ocultas,
+)
 
 
 def test_mae_e_meia_dose():
@@ -40,3 +49,66 @@ def test_cobertura_por_faixa():
     assert tabela.n.sum() == media.size
     assert (tabela.media_max_g.to_numpy()[:-1] <= tabela.media_min_g.to_numpy()[1:]).all()
     assert tabela.picp.between(0.8, 1.0).all()
+
+
+def _gaussianas(n=500, semente=0):
+    rng = np.random.default_rng(semente)
+    media = rng.uniform(10, 100, size=n)
+    var = rng.uniform(4, 400, size=n)
+    y = media + rng.normal(size=n) * np.sqrt(var)
+    return y, media, var
+
+
+def _assert_metricas_iguais(obtido, esperado):
+    assert obtido.keys() == esperado.keys()
+    for chave in esperado:
+        assert obtido[chave] == pytest.approx(esperado[chave], rel=1e-9), chave
+
+
+def test_mistura_um_componente():
+    y, media, var = _gaussianas()
+    _assert_metricas_iguais(avaliar_mistura(y, media[None], var[None]), avaliar(y, media, var))
+
+
+def test_mistura_componentes_iguais():
+    y, media, var = _gaussianas()
+    S = 7
+    _assert_metricas_iguais(avaliar_mistura(y, np.tile(media, (S, 1)), np.tile(var, (S, 1))), avaliar(y, media, var))
+
+
+def test_mistura_quantis():
+    medias = np.array([[0.0, 10.0], [50.0, 12.0]])
+    variancias = np.array([[1.0, 4.0], [9.0, 1.0]])
+    li, ls = intervalo(medias, variancias)
+    cdf = lambda x: ndtr((x - medias) / np.sqrt(variancias)).mean(axis=0)
+    np.testing.assert_allclose(cdf(li), 0.05, atol=1e-6)
+    np.testing.assert_allclose(cdf(ls), 0.95, atol=1e-6)
+
+
+def test_mistura_observacao_longe():
+    m = avaliar_mistura([1_000.0], [[0.0], [10.0]], [[1.0], [4.0]])
+    assert np.isfinite(m["nll"])
+    assert m["nll"] > 0
+
+
+def test_por_ocultas_classes():
+    rng = np.random.default_rng(0)
+    n = 200
+    y, media = rng.normal(size=n), np.zeros(n)
+    tabela = por_ocultas(y, media, media - 1, media + 1, rng.integers(0, 4, size=n))
+    assert tabela.n.sum() == n
+    assert "4+" not in set(tabela.n_ocultas)
+
+    tabela = por_ocultas(y, media, media - 1, media + 1, rng.integers(0, 9, size=n))
+    assert tabela.n.sum() == n
+    assert list(tabela.n_ocultas) == ["0", "1", "2", "3", "4+"]
+
+
+def test_por_ocultas_caso_conhecido():
+    y = np.array([0.0, 5.0, 0.0])
+    zeros = np.zeros(3)
+    tabela = por_ocultas(y, zeros, zeros - 1, zeros + 1, [0, 0, 5]).set_index("n_ocultas")
+    assert tabela.loc["0", "n"] == 2
+    assert tabela.loc["0", "picp"] == pytest.approx(0.5)
+    assert tabela.loc["4+", "n"] == 1
+    assert tabela.loc["4+", "picp"] == pytest.approx(1.0)

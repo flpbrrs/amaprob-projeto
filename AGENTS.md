@@ -72,7 +72,8 @@ Violações destas regras invalidam o experimento. Sinalize imediatamente qualqu
 ## 4. Protocolo experimental
 
 - **Taxas de mascaramento:** `{0.0, 0.25, 0.5, 0.75, 1.0}` sobre as quantidades de gavetas **presentes**. A taxa 1.0 é o cenário "sei o que comi, não sei quanto".
-- **Conjuntos mascarados:** treino, validação e teste, com o mesmo protocolo.
+- **Conjuntos mascarados:** treino, validação e teste, com o mesmo sorteio.
+- **Ajuste no treino completo:** o imputador e o regressor de referência são ajustados uma vez com as gramas completas do treino; as máscaras definem o que fica oculto na validação e no teste. A máscara do treino só serve ao braço plug-in recalibrado (§6), com imputação por ajuste cruzado por pessoa em 5 dobras. Motivo: na taxa 1, o treino mascarado não teria quantidade observada para o imputador aprender. Detalhes em `docs/mascaramento.md`.
 - **Mecanismo:** aleatório (MCAR), declarado como limitação. O mascaramento é por gaveta (esconde todos os itens dela de uma vez), também declarado.
 - **Repetições:** 3 sementes por taxa; reportar média e desvio.
 - **Split:** treino / validação / teste = 70/15/15 por `person_id`, semente 0 (`src/amaprob/data/splits.py`).
@@ -131,11 +132,12 @@ class ProbRegressor(Protocol):
 | Regressão linear bayesiana | Obrigatório | Forma fechada conjugada em NumPy |
 | Processo Gaussiano esparso (SVGP) | Obrigatório | GPyTorch |
 
-**Experimento central** (`src/amaprob/regression/propagation.py`):
-- **Plug-in:** imputa com a média da Parte 1 e prevê uma vez.
-- **Propagação:** para cada amostra `s` de `Imputer.sample`, prevê; combina as amostras preditivas como mistura.
+**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
+- **Plug-in:** preenche cada quantidade oculta com a média das amostras **em gramas** e prevê uma vez. A média do log convertida (`expm1` da média) subestimaria as gramas, e o plug-in perderia por viés de conversão, não pela incerteza.
+- **Plug-in recalibrado (margem fixa):** a mesma entrada, num regressor ajustado com o treino mascarado e imputado da mesma forma (ver §4). A variância de ruído absorve o erro de imputação como folga igual para toda refeição. Só com a regressão linear bayesiana.
+- **Propagação:** prevê para cada amostra e combina as preditivas na mistura `(1/S) Σ N(μ_s, σ²_s)`.
 
-Hipótese: a propagação produz intervalos calibrados; o plug-in subestima a incerteza.
+Hipótese: a propagação produz intervalos calibrados; o plug-in subestima a incerteza. Pergunta do artigo: **"o modelo sabe quando não sabe?"**, ou seja, se a incerteza por refeição separa as estimativas confiáveis das que pediriam mais informação, melhor que uma margem fixa. Por isso as métricas também são lidas por número de quantidades ocultas na refeição (0, 1, 2, 3, 4+), que o app conhece no uso.
 
 **Leitura esperada:** com taxa 0.0, erro próximo do piso (~8 g com K = 29; teste de sanidade). Com o aumento da taxa, a largura do intervalo cresce de forma calibrada. **Essa curva é o resultado principal.**
 
@@ -190,7 +192,7 @@ amaprob-projeto/
 
 Subpacotes são criados quando o código da etapa é escrito, não antes.
 
-**Ambiente:** `uv` com Python 3.12. Dependências entram sob demanda, discutidas antes (`uv add`). Stack prevista: NumPy, pandas, SciPy, scikit-learn, PyTorch, GPyTorch, BoTorch (ou scikit-optimize), PyMC/NumPyro + ArviZ, properscoring, matplotlib, pytest. Para ler as planilhas do IBGE uma única vez: `uv run --with openpyxl`.
+**Ambiente:** `uv` com Python 3.12. Dependências entram sob demanda, discutidas antes (`uv add`). Stack prevista: NumPy, pandas, SciPy, scikit-learn, PyTorch, GPyTorch, BoTorch (ou scikit-optimize), PyMC/NumPyro + ArviZ, scoringrules, plotnine (figuras, com o tema comum de `evaluation/tema.py`), pytest. Para ler as planilhas do IBGE uma única vez: `uv run --with openpyxl`.
 
 ---
 
@@ -210,6 +212,7 @@ Subpacotes são criados quando o código da etapa é escrito, não antes.
 - Prefira implementar a regressão linear bayesiana do zero, em forma fechada, com derivação comentada.
 
 **Escrita:**
+- Código que fala por si: nomes descritivos no lugar de comentários. Comentário ou docstring só para o porquê que o código não mostra. A exceção são os modelos (PPCA, FA, regressão linear bayesiana), que levam a derivação comentada.
 - Comentários, docstrings e documentação em tom neutro e impessoal: sem nomes de pessoas, datas de decisão ou atribuições.
 - Expanda siglas na primeira ocorrência em comentários e documentação.
 - Sinalize suposições sobre os dados da POF como "a verificar".

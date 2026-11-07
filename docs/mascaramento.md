@@ -17,6 +17,13 @@ A **taxa** r é a fração das quantidades presentes que fica oculta. O protocol
 
 Todos os modelos precisam ser avaliados sobre **as mesmas quantidades ocultas**. Se cada modelo sorteasse a própria máscara, a diferença entre eles misturaria "modelo melhor" com "sorteio mais fácil". Por isso as máscaras são geradas uma vez, com semente fixa, antes de qualquer modelagem, e gravadas em `data/processed/mascaras_k29.npz` (Regra 4 do `AGENTS.md`). Treino, validação e teste são mascarados pelo mesmo sorteio.
 
+## Papel da máscara em cada conjunto
+
+O imputador e o regressor de referência são ajustados com o **treino completo**, sem máscara. As refeições completas existem antes do uso (prescrições, a própria POF); a falta de quantidade só aparece no relato. Além disso, na taxa 1 o treino mascarado não teria nenhuma quantidade observada, e o imputador não teria o que aprender.
+
+- **Validação e teste:** a máscara define o que é imputado na hora de medir.
+- **Treino:** a máscara só serve ao braço *plug-in recalibrado* do experimento de propagação, cujo regressor é ajustado com as gramas do treino mascarado e imputado. Essa imputação usa ajuste cruzado por pessoa em 5 dobras: o imputador de cada dobra é ajustado com as outras, para não ver as gramas que preenche (Regra 2).
+
 ## Decisão 1: cada gaveta presente é sorteada de forma independente
 
 Para uma taxa r, **cada gaveta presente de cada refeição fica oculta com probabilidade r**, independentemente das outras gavetas, das quantidades, do carboidrato e do conjunto (treino, validação ou teste). É uma moeda viciada por célula.

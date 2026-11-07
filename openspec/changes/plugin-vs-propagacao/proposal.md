@@ -44,6 +44,7 @@ O uso pretendido orienta o desenho: as refeições completas (prescrição, POF)
 
 - Código novo: `src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`, `tests/test_propagacao.py`.
 - Código alterado: `src/amaprob/evaluation/metricas.py`, `tests/test_metricas.py`.
-- Nova dependência: `matplotlib`, para as figuras (pacote consolidado).
+- Novas dependências: `plotnine` (gramática de gráficos sobre o `matplotlib`), para as figuras, e `scipy`, para as métricas da mistura. Pacotes consolidados.
+- Tema comum das figuras em `src/amaprob/evaluation/tema.py`, com as fontes Roboto Condensed versionadas em `assets/fonts/`, para que todas as figuras do artigo tenham o mesmo padrão em qualquer máquina.
 - `AGENTS.md` §4 (treino completo; máscara no treino só para o braço recalibrado) e §6 (plug-in pela média em gramas das amostras, terceiro braço, pergunta "o modelo sabe quando não sabe?"); `docs/mascaramento.md` (papel da máscara no treino).
 - Resultados novos em `results/` (CSV) e `results/figuras/` (PNG).
