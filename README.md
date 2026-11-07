@@ -53,6 +53,22 @@ uv run python -m amaprob.experiments.taxa_zero   # teste de sanidade na taxa 0 (
 
 Ajusta a regressão linear bayesiana no treino, mede na validação e grava em `results/` as métricas (`taxa_zero_metricas.csv`), a cobertura por faixa da previsão (`taxa_zero_cobertura.csv`) e os tempos de ajuste (`tempos_ajuste.csv`). O conjunto de teste não é lido.
 
+```bash
+uv run python -m amaprob.experiments.propagacao  # plug-in × propagação por taxa (cerca de 35 min)
+```
+
+Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação nas taxas 0 a 1 e nas 3 sementes de máscara. Grava em `results/`:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `propagacao_resumo.csv` | média e desvio entre as sementes, por taxa e braço |
+| `propagacao_metricas.csv` | uma linha por taxa, semente e braço |
+| `propagacao_por_ocultas.csv` | métricas por número de gavetas ocultas na refeição |
+| `propagacao_S.csv` | comparação de S = 100 e S = 500 amostras, com os tempos |
+| `figuras/propagacao_picp.png`, `figuras/propagacao_mpiw.png` | cobertura e largura do intervalo de 90% pela taxa |
+
+A comparação de S ocupa cerca de 14 min; cada rodada da curva, cerca de 80 s.
+
 ## Testes
 
 ```bash

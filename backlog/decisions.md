@@ -27,6 +27,15 @@ Alternativas adiadas:
 
 **Quando voltar:** se a curva plug-in × propagação ficar ambígua por causa da referência da taxa 0, ou se o SVGP mostrar cobertura por faixa muito diferente da regressão linear bayesiana.
 
+## Ajustes do experimento de propagação para a próxima rodada
+
+Duas mudanças em `experiments/propagacao.py` ficam para a rodada que incluir o PPCA e a FA, para não repetir agora os ~35 minutos do experimento:
+
+- **S fixo em 100:** a comparação de S = 100 com S = 500 (taxa 0,5, semente 0) já foi feita, com folga nos dois critérios (`results/propagacao_S.csv`). Repeti-la custa ~14 minutos por rodada. O experimento passa a usar S = 100 direto e mantém o CSV da comparação como registro.
+- **Referência da taxa 0 por número de ocultas:** acrescentar a `propagacao_por_ocultas.csv` a cobertura e o erro da previsão sem ocultos, agrupados pelo número de gavetas ocultas de cada máscara. Motivo: refeições com mais ocultas também são maiores, e o modelo já cobre de forma diferente as refeições pequenas e as grandes na taxa 0 (caudas pesadas). Sem a referência, a queda de cobertura por classe pode ser confundida com o efeito do tamanho. Calculada à parte, a referência é quase plana entre as classes (91,5% a 94,3% na taxa 0,5), então a leitura atual não muda.
+
+**Quando voltar:** na próxima execução do experimento.
+
 ## Regra do IBGE para os gramas de açúcar adicionado
 
 Na POF, o informante só diz se adicionou açúcar (sim ou não); os gramas foram estimados depois pelo IBGE, com uma regra que a documentação dos microdados não descreve (ver `AGENTS.md` §2). Assim, a parte do açúcar no carboidrato da refeição (`y`) e na gaveta de açúcar é uma estimativa, não uma medida declarada.

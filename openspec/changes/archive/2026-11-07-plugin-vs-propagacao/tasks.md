@@ -17,18 +17,19 @@
 
 ## 4. Experimento
 
-- [ ] 4.1 Implementar `experiments/propagacao.py` (ajuste no treino completo, escolha de S, laço por semente e taxa, CSVs e figuras) e executar `uv run python -m amaprob.experiments.propagacao`; verificar que, na taxa 0, as métricas dos três braços batem com `results/taxa_zero_metricas.csv` (linha `blr`) e que todos os arquivos da spec `propagacao` existem
-- [ ] 4.2 Conferir a leitura dos resultados antes de interpretar: plug-in com PICP caindo com a taxa; plug-in e propagação com o mesmo MAE; tempo de cada S registrado. Se o CRPS com S = 500 passar de 10 minutos, aplicar a alternativa do design (`crps_ensemble` com estimador `fair` na comparação de S) e registrar no relatório
+- [x] 4.1 Implementar `experiments/propagacao.py` (ajuste no treino completo, escolha de S, laço por semente e taxa, CSVs e figuras) e executar `uv run python -m amaprob.experiments.propagacao`; verificar que, na taxa 0, as métricas dos três braços batem com `results/taxa_zero_metricas.csv` (linha `blr`) e que todos os arquivos da spec `propagacao` existem
+- [x] 4.2 Conferir a leitura dos resultados antes de interpretar: plug-in com PICP caindo com a taxa; plug-in e propagação com o mesmo MAE; tempo de cada S registrado. Se o CRPS com S = 500 passar de 10 minutos, aplicar a alternativa do design (`crps_ensemble` com estimador `fair` na comparação de S) e registrar no relatório
+  - Registro: as métricas com S = 500 levaram 643 s (CRPS e bissecção juntos), acima dos 10 minutos. A comparação exata já tinha terminado, com folga nos dois critérios (CRPS 0,39% contra 1%; PICP 0,25 ponto contra 0,5), e foi mantida: a alternativa só trocaria um valor exato por um com ruído de Monte Carlo. S = 100 fica fixo para as próximas rodadas (ver `backlog/decisions.md`).
 - [x] 4.3 Estender `tests/test_taxa_zero.py` ou `tests/test_propagacao.py`, pulado sem os dados processados: o experimento nunca seleciona linhas de `teste`; verificar com `uv run pytest`
 
 ## 5. Documentação
 
-- [ ] 5.1 Atualizar o `AGENTS.md`: §4 (imputador e regressor no treino completo; máscara do treino só para o braço recalibrado, com ajuste cruzado), §6 (plug-in pela média em gramas das amostras, terceiro braço, leitura por número de ocultas, pergunta "o modelo sabe quando não sabe?") e §11 se surgir risco novo; verificar relendo cada seção contra o `design.md`
-- [ ] 5.2 Atualizar `docs/mascaramento.md` (papel da máscara no treino) e acrescentar ao `README.md` o comando do experimento; verificar que o comando roda como escrito
+- [x] 5.1 Atualizar o `AGENTS.md`: §4 (imputador e regressor no treino completo; máscara do treino só para o braço recalibrado, com ajuste cruzado), §6 (plug-in pela média em gramas das amostras, terceiro braço, leitura por número de ocultas, pergunta "o modelo sabe quando não sabe?") e §11 se surgir risco novo; verificar relendo cada seção contra o `design.md`
+- [x] 5.2 Atualizar `docs/mascaramento.md` (papel da máscara no treino) e acrescentar ao `README.md` o comando do experimento; verificar que o comando roda como escrito
 
 ## 6. Integração
 
-- [ ] 6.1 Rodar `uv run pytest` com todos os testes passando e `openspec validate plugin-vs-propagacao --strict` sem erros
+- [x] 6.1 Rodar `uv run pytest` com todos os testes passando e `openspec validate plugin-vs-propagacao --strict` sem erros
 
 ## Workflow follow-up
 
