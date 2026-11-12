@@ -71,20 +71,34 @@ def dobras_por_pessoa(pessoas: np.ndarray, rng: np.random.Generator, n_dobras: i
     return dobra_da_pessoa[posicao_da_refeicao]
 
 
+def ajustar_dobras(
+    novo_imputador: Callable[[], Imputer], G: np.ndarray, P: np.ndarray, C: np.ndarray, dobras: np.ndarray,
+) -> list[Imputer]:
+    """Um imputador por dobra, ajustado com o treino completo das outras dobras.
+
+    Sem máscara, o ajuste não depende da taxa nem da semente: basta um por dobra para todo o
+    experimento. Só a amostragem usa a máscara.
+    """
+    sem_mascara = np.zeros_like(P, dtype=bool)
+    ajustados = []
+    for f in range(int(dobras.max()) + 1):
+        fora = dobras != f
+        ajustados.append(novo_imputador().fit(ocultar(G[fora], sem_mascara[fora]), P[fora], sem_mascara[fora], C[fora]))
+    return ajustados
+
+
 def imputar_treino_cruzado(
-    novo_imputador: Callable[[], Imputer], G: np.ndarray, P: np.ndarray, M: np.ndarray, C: np.ndarray,
+    imputadores_das_dobras: Sequence[Imputer], G: np.ndarray, P: np.ndarray, M: np.ndarray, C: np.ndarray,
     dobras: np.ndarray, n_amostras: int, geradores: Sequence[np.random.Generator],
 ) -> np.ndarray:
     """Gramas do treino com as células de M preenchidas pela média das amostras em gramas.
 
-    O imputador de cada dobra é ajustado só com as outras dobras, completas, para que nenhum
+    Cada dobra é imputada pelo imputador ajustado sem ela (`ajustar_dobras`), para que nenhum
     imputador veja as gramas que vai preencher.
     """
     G_imputado = np.empty_like(G, dtype=np.float64)
-    sem_mascara = np.zeros_like(M, dtype=bool)
-    for f, rng in enumerate(geradores):
-        dentro, fora = dobras == f, dobras != f
-        imputador = novo_imputador().fit(ocultar(G[fora], sem_mascara[fora]), P[fora], sem_mascara[fora], C[fora])
+    for f, (imputador, rng) in enumerate(zip(imputadores_das_dobras, geradores, strict=True)):
+        dentro = dobras == f
         linhas = np.flatnonzero(dentro)
         for b, G_s in amostras_em_gramas(imputador, G[dentro], P[dentro], M[dentro], C[dentro], n_amostras, rng):
             G_imputado[linhas[b]] = G_s.mean(axis=0)

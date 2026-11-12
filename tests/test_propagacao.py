@@ -13,6 +13,7 @@ from amaprob.regression.propagation import (
     PLUGIN,
     PLUGIN_RECALIBRADO,
     PROPAGACAO,
+    ajustar_dobras,
     dobras_por_pessoa,
     imputar_treino_cruzado,
     momentos_da_mistura,
@@ -67,8 +68,9 @@ def test_bracos_iguais_sem_ocultos(dados):
     G, P, _, C, y, pessoas = dados
     sem_mascara = np.zeros_like(P)
     imputador, regressor = _ajustados(G, P, C, y)
+    dobras = dobras_por_pessoa(pessoas, np.random.default_rng(0))
     G_recalibrado = imputar_treino_cruzado(
-        PorcaoMedia, G, P, sem_mascara, C, dobras_por_pessoa(pessoas, np.random.default_rng(0)), S, _geradores()
+        ajustar_dobras(PorcaoMedia, G, P, C, dobras), G, P, sem_mascara, C, dobras, S, _geradores()
     )
     recalibrado = RegressaoLinearBayesiana().fit(montar_Z(G_recalibrado, P, C), y)
     bracos = prever_bracos(imputador, regressor, G, P, sem_mascara, C, S, np.random.default_rng(0), recalibrado)
@@ -95,10 +97,32 @@ def test_nenhum_imputador_ve_o_que_imputa(dados):
     ocultos_da_dobra = M & (dobras == 0)[:, None]
     G_alterado[ocultos_da_dobra] = np.random.default_rng(9).uniform(1, 2_000, size=ocultos_da_dobra.sum())
 
-    original = imputar_treino_cruzado(PorcaoMedia, G, P, M, C, dobras, S, _geradores())
-    alterado = imputar_treino_cruzado(PorcaoMedia, G_alterado, P, M, C, dobras, S, _geradores())
+    # As dobras são reajustadas com G_alterado: as outras dobras veem as células alteradas, a dobra 0 não.
+    original = imputar_treino_cruzado(ajustar_dobras(PorcaoMedia, G, P, C, dobras), G, P, M, C, dobras, S, _geradores())
+    alterado = imputar_treino_cruzado(
+        ajustar_dobras(PorcaoMedia, G_alterado, P, C, dobras), G_alterado, P, M, C, dobras, S, _geradores()
+    )
     np.testing.assert_array_equal(original[dobras == 0], alterado[dobras == 0])
     assert not np.array_equal(original[dobras != 0], alterado[dobras != 0])
+
+
+class _PorcaoMediaContada(PorcaoMedia):
+    ajustes = 0
+
+    def fit(self, X, P, M, C):
+        type(self).ajustes += 1
+        return super().fit(X, P, M, C)
+
+
+def test_dobras_ajustadas_uma_vez(dados):
+    G, P, M, C, _, pessoas = dados
+    dobras = dobras_por_pessoa(pessoas, np.random.default_rng(0))
+    imputadores = ajustar_dobras(_PorcaoMediaContada, G, P, C, dobras)
+    for taxa in (0.25, 0.5, 1.0):
+        for semente in (0, 1, 2):
+            M_ts = gerar_mascaras(P, taxas=(taxa,), sementes=(semente,))[0, 0]
+            imputar_treino_cruzado(imputadores, G, P, M_ts, C, dobras, S, _geradores(semente))
+    assert _PorcaoMediaContada.ajustes == N_DOBRAS
 
 
 @pytest.mark.skipif(not (ARQUIVO_REFEICOES.exists() and ARQUIVO_MASCARAS.exists()), reason="dados processados ausentes")

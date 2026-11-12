@@ -131,3 +131,46 @@ def cobertura_por_faixa(y: np.ndarray, media: np.ndarray, var: np.ndarray, n_fai
         media_min_g=("media", "min"), media_max_g=("media", "max"), n=("dentro", "size"), picp=("dentro", "mean")
     )
     return tabela.reset_index()
+
+
+def celulas_de_imputacao(G: np.ndarray, amostras_log: np.ndarray, M: np.ndarray) -> pd.DataFrame:
+    """Métricas por célula oculta, a partir das amostras (S, N, K) em log1p(gramas).
+
+    Única leitura das gramas verdadeiras de M fora do mascaramento (Regra 2: só na avaliação).
+    Tudo sai das amostras, para servir a qualquer imputador pelo contrato: a NLL é a da gaussiana
+    com a média e a variância das amostras da célula, e o intervalo vai dos quantis empíricos.
+    """
+    M = np.asarray(M, dtype=bool)
+    linhas, gavetas = np.nonzero(M)
+    amostras = np.asarray(amostras_log, dtype=np.float64)[:, linhas, gavetas]
+    verdade_g = np.asarray(G, dtype=np.float64)[linhas, gavetas]
+    verdade_log = np.log1p(verdade_g)
+
+    media_log, var_log = amostras.mean(axis=0), amostras.var(axis=0)
+    li, ls = np.quantile(amostras, [(1 - NIVEL) / 2, (1 + NIVEL) / 2], axis=0)
+    with np.errstate(divide="ignore", invalid="ignore"):  # amostras constantes: variância 0
+        nll = 0.5 * np.log(2 * np.pi * var_log) + (verdade_log - media_log) ** 2 / (2 * var_log)
+    return pd.DataFrame({
+        "gaveta": gavetas,
+        "erro_g": np.abs(np.expm1(amostras).mean(axis=0) - verdade_g),
+        "erro_log": np.abs(media_log - verdade_log),
+        "nll_log": nll,
+        "crps_log": sr.crps_ensemble(verdade_log, amostras, m_axis=0) if len(linhas) else np.empty(0),
+        "dentro": (li <= verdade_log) & (verdade_log <= ls),
+        "largura_g": np.expm1(ls) - np.expm1(li),
+    })
+
+
+_RESUMO_IMPUTACAO = {
+    "n_celulas": ("erro_g", "size"), "mae_g": ("erro_g", "mean"), "mae_log": ("erro_log", "mean"),
+    "nll_log": ("nll_log", "mean"), "crps_log": ("crps_log", "mean"), "picp": ("dentro", "mean"),
+    "mpiw_g": ("largura_g", "mean"),
+}
+
+
+def avaliar_imputacao(celulas: pd.DataFrame) -> dict:
+    return celulas.assign(todas=0).groupby("todas").agg(**_RESUMO_IMPUTACAO).iloc[0].to_dict()
+
+
+def imputacao_por_gaveta(celulas: pd.DataFrame) -> pd.DataFrame:
+    return celulas.groupby("gaveta").agg(**_RESUMO_IMPUTACAO).reset_index()

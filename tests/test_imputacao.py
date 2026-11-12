@@ -1,4 +1,4 @@
-"""Contrato dos imputadores e não vazamento de X[M] (Regra 2), com o baseline como imputador."""
+"""Contrato dos imputadores e não vazamento de X[M] (Regra 2), sobre todos os imputadores."""
 
 import numpy as np
 import pytest
@@ -6,8 +6,15 @@ import pytest
 from amaprob.data.mascaras import gerar_mascaras
 from amaprob.imputation.base import ocultar
 from amaprob.imputation.baseline import PorcaoMedia
+from amaprob.imputation.ppca import PPCA
 
 N, K, S = 2_000, 6, 20
+IMPUTADORES = {"porcao_media": PorcaoMedia, "ppca": lambda: PPCA(q=2)}
+
+
+@pytest.fixture(params=list(IMPUTADORES), scope="module")
+def novo_imputador(request):
+    return IMPUTADORES[request.param]
 
 
 @pytest.fixture(scope="module")
@@ -20,9 +27,9 @@ def dados():
     return G, P, M, C
 
 
-def _imputar(G, P, M, C, semente=0):
+def _imputar(novo_imputador, G, P, M, C, semente=0):
     X = ocultar(G, M)
-    return PorcaoMedia().fit(X, P, M, C).sample(X, P, M, C, S, np.random.default_rng(semente))
+    return novo_imputador().fit(X, P, M, C).sample(X, P, M, C, S, np.random.default_rng(semente))
 
 
 def test_ocultar(dados):
@@ -32,35 +39,35 @@ def test_ocultar(dados):
     np.testing.assert_allclose(X[~M], np.log1p(G[~M]))
 
 
-def test_forma_e_observados_preservados(dados):
+def test_forma_e_observados_preservados(dados, novo_imputador):
     G, P, M, C = dados
-    amostras = _imputar(G, P, M, C)
+    amostras = _imputar(novo_imputador, G, P, M, C)
     assert amostras.shape == (S, N, K)
     observado = P & ~M
     assert np.all(amostras[:, observado] == np.log1p(G[observado]))
     assert np.all(amostras[:, ~P] == 0.0)
 
 
-def test_ocultos_preenchidos(dados):
+def test_ocultos_preenchidos(dados, novo_imputador):
     G, P, M, C = dados
-    ocultos = _imputar(G, P, M, C)[:, M]
+    ocultos = _imputar(novo_imputador, G, P, M, C)[:, M]
     assert np.isfinite(ocultos).all() and (ocultos >= 0).all()
 
 
-def test_reprodutivel_pelo_gerador(dados):
+def test_reprodutivel_pelo_gerador(dados, novo_imputador):
     G, P, M, C = dados
-    np.testing.assert_array_equal(_imputar(G, P, M, C, semente=3), _imputar(G, P, M, C, semente=3))
+    np.testing.assert_array_equal(_imputar(novo_imputador, G, P, M, C, semente=3), _imputar(novo_imputador, G, P, M, C, semente=3))
 
 
-def test_nenhum_vazamento(dados):
+def test_nenhum_vazamento(dados, novo_imputador):
     G, P, M, C = dados
     # Mesmas gramas observadas; valores ocultos verdadeiros trocados por outros quaisquer.
     G_alterado = G.copy()
     G_alterado[M] = np.random.default_rng(9).uniform(1, 2_000, size=M.sum())
-    np.testing.assert_array_equal(_imputar(G, P, M, C), _imputar(G_alterado, P, M, C))
+    np.testing.assert_array_equal(_imputar(novo_imputador, G, P, M, C), _imputar(novo_imputador, G_alterado, P, M, C))
 
 
-def test_imputador_ignora_x_m_mesmo_preenchido(dados):
+def test_imputador_ignora_x_m_mesmo_preenchido(dados, novo_imputador):
     # Segunda camada: mesmo que X[M] chegasse preenchido (com valores errados), a saída do
     # imputador não muda. Protege contra um imputador que leia X sem respeitar M.
     G, P, M, C = dados
@@ -69,7 +76,7 @@ def test_imputador_ignora_x_m_mesmo_preenchido(dados):
     X_preenchido[M] = np.random.default_rng(9).uniform(0, 8, size=M.sum())
     saidas = []
     for X in (X_apagado, X_preenchido):
-        modelo = PorcaoMedia().fit(X, P, M, C)
+        modelo = novo_imputador().fit(X, P, M, C)
         saidas.append(modelo.sample(X, P, M, C, S, np.random.default_rng(0)))
     np.testing.assert_array_equal(saidas[0], saidas[1])
 

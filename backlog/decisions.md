@@ -27,14 +27,15 @@ Alternativas adiadas:
 
 **Quando voltar:** se a curva plug-in × propagação ficar ambígua por causa da referência da taxa 0, ou se o SVGP mostrar cobertura por faixa muito diferente da regressão linear bayesiana.
 
-## Ajustes do experimento de propagação para a próxima rodada
+## Média de cada gaveta dependendo da presença e do contexto (PPCA/FA "B+")
 
-Duas mudanças em `experiments/propagacao.py` ficam para a rodada que incluir o PPCA e a FA, para não repetir agora os ~35 minutos do experimento:
+No PPCA e na FA, a média de cada gaveta (μ_k) é única: o tamanho esperado da porção não muda com as outras gavetas presentes (`P`) nem com o contexto (`C`). Com quantidades observadas, a correlação entre gavetas compensa em parte. Na taxa 1, sem nenhuma quantidade observada, a posterior do latente é a priori, e a média imputada fica perto da do baseline.
 
-- **S fixo em 100:** a comparação de S = 100 com S = 500 (taxa 0,5, semente 0) já foi feita, com folga nos dois critérios (`results/propagacao_S.csv`). Repeti-la custa ~14 minutos por rodada. O experimento passa a usar S = 100 direto e mantém o CSV da comparação como registro.
-- **Referência da taxa 0 por número de ocultas:** acrescentar a `propagacao_por_ocultas.csv` a cobertura e o erro da previsão sem ocultos, agrupados pelo número de gavetas ocultas de cada máscara. Motivo: refeições com mais ocultas também são maiores, e o modelo já cobre de forma diferente as refeições pequenas e as grandes na taxa 0 (caudas pesadas). Sem a referência, a queda de cobertura por classe pode ser confundida com o efeito do tamanho. Calculada à parte, a referência é quase plana entre as classes (91,5% a 94,3% na taxa 0,5), então a leitura atual não muda.
+Alternativa adiada: μ_k como função linear de `P` e `C`, com o passo M virando uma regressão por gaveta (a mesma estrutura do passo M atual, com mais colunas em z̃).
 
-**Quando voltar:** na próxima execução do experimento.
+**Por que ficou de fora:** o escopo mínimo pede PPCA e FA; a extensão muda o modelo sem ser exigida.
+
+**Quando voltar:** se o intervalo da propagação na taxa 1 continuar largo com o PPCA e a FA, e houver tempo antes da entrega.
 
 ## Regra do IBGE para os gramas de açúcar adicionado
 

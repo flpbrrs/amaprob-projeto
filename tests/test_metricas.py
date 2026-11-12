@@ -8,8 +8,11 @@ from scipy.special import ndtr
 from amaprob.evaluation.metricas import (
     Z_INTERVALO,
     avaliar,
+    avaliar_imputacao,
     avaliar_mistura,
+    celulas_de_imputacao,
     cobertura_por_faixa,
+    imputacao_por_gaveta,
     intervalo,
     por_ocultas,
 )
@@ -112,3 +115,55 @@ def test_por_ocultas_caso_conhecido():
     assert tabela.loc["0", "picp"] == pytest.approx(0.5)
     assert tabela.loc["4+", "n"] == 1
     assert tabela.loc["4+", "picp"] == pytest.approx(1.0)
+
+
+def test_imputacao_caso_conhecido():
+    G = np.array([[10.0, 7.0], [3.0, 100.0]])
+    M = np.array([[True, False], [False, True]])
+    amostras = np.zeros((4, 2, 2))
+    amostras[:, 0, 0], amostras[:, 1, 1] = np.log1p(20), np.log1p(100)
+    m = avaliar_imputacao(celulas_de_imputacao(G, amostras, M))
+    assert m["n_celulas"] == 2
+    assert m["mae_g"] == pytest.approx(5.0)
+    assert m["mae_log"] == pytest.approx(abs(np.log1p(20) - np.log1p(10)) / 2)
+
+
+def test_imputacao_so_celulas_ocultas():
+    rng = np.random.default_rng(0)
+    G = rng.uniform(1, 200, size=(50, 4))
+    M = rng.random((50, 4)) < 0.4
+    amostras = rng.normal(4, 0.5, size=(30, 50, 4))
+    G_alterado = np.where(M, G, rng.uniform(1, 200, size=G.shape))
+    pd_a, pd_b = (celulas_de_imputacao(g, amostras, M) for g in (G, G_alterado))
+    assert avaliar_imputacao(pd_a) == avaliar_imputacao(pd_b)
+
+
+def test_imputacao_amostras_gaussianas():
+    mu, sigma, verdade_log = 4.0, 0.5, 4.3
+    amostras = np.random.default_rng(1).normal(mu, sigma, size=(200_000, 1, 1))
+    m = avaliar_imputacao(celulas_de_imputacao(np.array([[np.expm1(verdade_log)]]), amostras, np.ones((1, 1), bool)))
+    z = (verdade_log - mu) / sigma
+    nll = 0.5 * np.log(2 * np.pi * sigma**2) + z**2 / 2
+    crps = sigma * (z * (2 * ndtr(z) - 1) + 2 * np.exp(-(z**2) / 2) / np.sqrt(2 * np.pi) - 1 / np.sqrt(np.pi))
+    largura = np.expm1(mu + Z_INTERVALO * sigma) - np.expm1(mu - Z_INTERVALO * sigma)
+    assert m["nll_log"] == pytest.approx(nll, abs=0.01)
+    assert m["crps_log"] == pytest.approx(crps, abs=0.005)
+    assert m["mpiw_g"] == pytest.approx(largura, rel=0.01)
+    assert m["picp"] == 1.0
+
+
+def test_imputacao_cobertura_conhecida():
+    amostras = np.linspace(0, 1, 101)[:, None, None] * np.ones((1, 1, 3))  # intervalo [0,05; 0,95] em log
+    G = np.expm1(np.array([[0.5, 0.9, 2.0]]))
+    m = avaliar_imputacao(celulas_de_imputacao(G, amostras, np.ones((1, 3), bool)))
+    assert m["picp"] == pytest.approx(2 / 3)
+
+
+def test_imputacao_por_gaveta_soma_celulas():
+    rng = np.random.default_rng(2)
+    M = rng.random((40, 5)) < 0.3
+    M[:, 4] = False
+    celulas = celulas_de_imputacao(rng.uniform(1, 50, size=(40, 5)), rng.normal(3, 0.4, size=(20, 40, 5)), M)
+    tabela = imputacao_por_gaveta(celulas)
+    assert set(tabela.gaveta) == set(np.flatnonzero(M.any(axis=0)))
+    assert tabela.n_celulas.sum() == M.sum()

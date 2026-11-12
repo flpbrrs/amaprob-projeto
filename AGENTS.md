@@ -100,13 +100,13 @@ class Imputer(Protocol):
 | Modelo | Escopo | Implementação sugerida |
 |---|---|---|
 | Porção média por gaveta | Baseline de referência | NumPy |
-| PPCA (Análise de Componentes Principais Probabilística) via EM com dados faltantes | Obrigatório | NumPy, do zero (o scikit-learn não trata faltantes) |
+| PPCA (Análise de Componentes Principais Probabilística) via EM com dados faltantes | Obrigatório | NumPy, do zero (o scikit-learn não trata faltantes); `imputation/ppca.py`, q = 5 de partida |
 | FA (Análise Fatorial) via EM com dados faltantes | Obrigatório | NumPy; difere do PPCA só no ruído (diagonal em vez de isotrópico), reaproveita o código |
 | VAE (Autoencoder Variacional) com máscara | Extra | PyTorch; entrada = `X` observado + `P` + `M` + `C` |
 
-**Métricas** (por taxa > 0): erro de imputação (MAE em gramas e em log), log-verossimilhança nos valores mascarados, cobertura do intervalo de 90%. Na taxa 0.0 não há o que imputar.
+**Gavetas ausentes como condicionantes** (PPCA e FA): a verossimilhança de cada refeição usa só as gavetas observadas (`P = 1` e `M = 0`); gavetas ausentes não entram como zero. O modelo aprende o tamanho das porções dado que a gaveta está presente, como o baseline. Motivos: 89% das células são zero, e toda gaveta imputada está presente (`M ⊆ P`); com zeros, as porções imputadas sairiam puxadas para zero. A extensão com a média dependendo de `P` e `C` está em `backlog/decisions.md`.
 
-**Decisão em aberto:** gavetas ausentes como zeros observados no PPCA (má especificação conhecida) ou como condicionantes. Proposta: condicionantes.
+**Métricas** (por taxa > 0, nas células ocultas da validação, globais e por gaveta; `evaluation/metricas.py`): MAE em gramas e em log, NLL e CRPS em log, cobertura e largura do intervalo de 90%. Tudo sai das S amostras de `Imputer.sample`, para valer para qualquer imputador sem mudar o contrato: a NLL é a da gaussiana com a média e a variância das amostras de cada célula, e o intervalo vem dos quantis empíricos. Na taxa 0.0 não há o que imputar.
 
 ---
 
@@ -132,12 +132,12 @@ class ProbRegressor(Protocol):
 | Regressão linear bayesiana | Obrigatório | Forma fechada conjugada em NumPy |
 | Processo Gaussiano esparso (SVGP) | Obrigatório | GPyTorch |
 
-**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
+**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`), com o imputador como dimensão (porção média e PPCA na mesma execução, com as mesmas máscaras e geradores) e S = 100 amostras fixo (comparação com S = 500 em `results/propagacao_S.csv`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
 - **Plug-in:** preenche cada quantidade oculta com a média das amostras **em gramas** e prevê uma vez. A média do log convertida (`expm1` da média) subestimaria as gramas, e o plug-in perderia por viés de conversão, não pela incerteza.
-- **Plug-in recalibrado (margem fixa):** a mesma entrada, num regressor ajustado com o treino mascarado e imputado da mesma forma (ver §4). A variância de ruído absorve o erro de imputação como folga igual para toda refeição. Só com a regressão linear bayesiana.
+- **Plug-in recalibrado (margem fixa):** a mesma entrada, num regressor ajustado com o treino mascarado e imputado da mesma forma (ver §4). A variância de ruído absorve o erro de imputação como folga igual para toda refeição. Só com a regressão linear bayesiana. Os imputadores das 5 dobras são ajustados uma vez por imputador: sem máscara, o ajuste não depende da taxa nem da semente.
 - **Propagação:** prevê para cada amostra e combina as preditivas na mistura `(1/S) Σ N(μ_s, σ²_s)`.
 
-Hipótese: a propagação produz intervalos calibrados; o plug-in subestima a incerteza. Pergunta do artigo: **"o modelo sabe quando não sabe?"**, ou seja, se a incerteza por refeição separa as estimativas confiáveis das que pediriam mais informação, melhor que uma margem fixa. Por isso as métricas também são lidas por número de quantidades ocultas na refeição (0, 1, 2, 3, 4+), que o app conhece no uso.
+Hipótese: a propagação produz intervalos calibrados; o plug-in subestima a incerteza. Pergunta do artigo: **"o modelo sabe quando não sabe?"**, ou seja, se a incerteza por refeição separa as estimativas confiáveis das que pediriam mais informação, melhor que uma margem fixa. Por isso as métricas também são lidas por número de quantidades ocultas na refeição (0, 1, 2, 3, 4+), que o app conhece no uso, ao lado da referência da taxa 0 (previsão com as gramas completas, agrupada pelas mesmas classes), que separa o efeito das ocultas do efeito do tamanho da refeição.
 
 **Leitura esperada:** com taxa 0.0, erro próximo do piso (~8 g com K = 29; teste de sanidade). Com o aumento da taxa, a largura do intervalo cresce de forma calibrada. **Essa curva é o resultado principal.**
 
@@ -249,4 +249,4 @@ Escopo: só o mínimo descrito nas seções 5 a 7. Os extras (VAE, busca aleató
 
 ## 12. Decisões em aberto
 
-- Gavetas ausentes no PPCA/FA: zeros observados ou condicionantes (proposta: condicionantes).
+Nenhuma no momento.
