@@ -78,7 +78,7 @@ Isso dá a condicional exata `x_H | x_O` sem montar covariâncias de tamanho var
 
 ### 6. Métricas de imputação
 
-`metricas.avaliar_imputacao(G_verdadeiro, amostras_log, M)` recebe as amostras em `log1p` das células ocultas e devolve MAE em gramas e em log, NLL e CRPS em log, PICP e MPIW em gramas (spec `metricas`). `metricas.imputacao_por_gaveta(...)` faz o mesmo agrupado por gaveta.
+`metricas.celulas_de_imputacao(G, amostras_log, M)` devolve uma linha por célula oculta (gaveta, erro em gramas e em log, NLL e CRPS em log, dentro do intervalo, largura em gramas); `avaliar_imputacao(celulas)` resume tudo e `imputacao_por_gaveta(celulas)` resume por gaveta (spec `metricas`). A tabela por célula permite juntar os blocos da amostragem antes de resumir.
 
 - O CRPS vem de `scoringrules.crps_ensemble`, já instalado.
 - O intervalo pelos quantis empíricos vale igual em log e em gramas, porque `expm1` é monótona; a MPIW é reportada em gramas.

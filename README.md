@@ -54,18 +54,20 @@ uv run python -m amaprob.experiments.taxa_zero   # teste de sanidade na taxa 0 (
 Ajusta a regressão linear bayesiana no treino, mede na validação e grava em `results/` as métricas (`taxa_zero_metricas.csv`), a cobertura por faixa da previsão (`taxa_zero_cobertura.csv`) e os tempos de ajuste (`tempos_ajuste.csv`). O conjunto de teste não é lido.
 
 ```bash
-uv run python -m amaprob.experiments.propagacao  # plug-in × propagação por taxa (cerca de 35 min)
+uv run python -m amaprob.experiments.propagacao  # plug-in × propagação por taxa e imputador (cerca de 1 h)
 ```
 
 Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação nas taxas 0 a 1 e nas 3 sementes de máscara. Grava em `results/`:
 
 | Arquivo | Conteúdo |
 |---|---|
-| `propagacao_resumo.csv` | média e desvio entre as sementes, por taxa e braço |
-| `propagacao_metricas.csv` | uma linha por taxa, semente e braço |
-| `propagacao_por_ocultas.csv` | métricas por número de gavetas ocultas na refeição |
-| `propagacao_S.csv` | comparação de S = 100 e S = 500 amostras, com os tempos |
-| `figuras/propagacao_picp.png`, `figuras/propagacao_mpiw.png` | cobertura e largura do intervalo de 90% pela taxa |
+| `propagacao_resumo.csv` | média e desvio entre as sementes, por imputador, taxa e braço |
+| `propagacao_metricas.csv` | uma linha por imputador, taxa, semente e braço |
+| `propagacao_por_ocultas.csv` | métricas por número de gavetas ocultas na refeição, com a referência da taxa 0 |
+| `propagacao_S.csv` | comparação de S = 100 e S = 500 amostras, com os tempos (registro; não é regravado) |
+| `imputacao_metricas.csv`, `imputacao_por_gaveta.csv` | Parte 1: erro e calibração da imputação nas células ocultas, por imputador, taxa e semente |
+| `imputadores_ajuste.csv` | tempo e iterações do ajuste de cada imputador |
+| `figuras/propagacao_picp.png`, `figuras/propagacao_mpiw.png` | cobertura e largura do intervalo de 90% pela taxa, um painel por imputador |
 
 A comparação de S ocupa cerca de 14 min; cada rodada da curva, cerca de 80 s.
 
