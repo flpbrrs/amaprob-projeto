@@ -6,10 +6,11 @@ import pytest
 from amaprob.data.mascaras import gerar_mascaras
 from amaprob.imputation.base import ocultar
 from amaprob.imputation.baseline import PorcaoMedia
+from amaprob.imputation.fa import FA
 from amaprob.imputation.ppca import PPCA
 
 N, K, S = 2_000, 6, 20
-IMPUTADORES = {"porcao_media": PorcaoMedia, "ppca": lambda: PPCA(q=2)}
+IMPUTADORES = {"porcao_media": PorcaoMedia, "ppca": lambda: PPCA(q=2), "fa": lambda: FA(q=2)}
 
 
 @pytest.fixture(params=list(IMPUTADORES), scope="module")

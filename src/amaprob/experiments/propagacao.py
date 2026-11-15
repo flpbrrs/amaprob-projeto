@@ -1,16 +1,22 @@
 """Plug-in × plug-in recalibrado × propagação em função da taxa de quantidades ocultas, por imputador.
 
-Cada imputador (porção média e PPCA) e a regressão linear bayesiana são ajustados uma vez no
+Cada imputador (porção média, PPCA e FA) e a regressão linear bayesiana são ajustados uma vez no
 treino completo; os imputadores das 5 dobras do braço recalibrado também, uma vez por imputador.
 As máscaras definem o que fica oculto na validação. O teste nunca é lido (Regra 6).
 
 Grava também as métricas da Parte 1 (imputação nas células ocultas da validação) e a referência
 da taxa 0 por número de ocultas.
 
-Uso: uv run python -m amaprob.experiments.propagacao
+Com `--imputadores`, só os imputadores escolhidos rodam, e as linhas deles entram nos CSVs
+existentes; as dos outros imputadores e a referência da taxa 0 ficam como estavam. Vale porque os
+geradores dependem só da semente, da taxa e do fluxo, e não do imputador.
+
+Uso: uv run python -m amaprob.experiments.propagacao [--imputadores fa]
 """
 
+import argparse
 import time
+from pathlib import Path
 from dataclasses import dataclass
 
 import numpy as np
@@ -27,6 +33,7 @@ from amaprob.evaluation.tema import CORES, TEMA
 from amaprob.experiments.taxa_zero import separar
 from amaprob.imputation.base import Imputer, ocultar
 from amaprob.imputation.baseline import PorcaoMedia
+from amaprob.imputation.fa import FA
 from amaprob.imputation.ppca import PPCA
 from amaprob.regression.base import montar_Z
 from amaprob.regression.blr import RegressaoLinearBayesiana
@@ -44,9 +51,13 @@ from amaprob.regression.propagation import (
 
 SAIDA = RAIZ / "results"
 S = 100
-Q_PPCA = 5
-IMPUTADORES = {"porcao_media": PorcaoMedia, "ppca": lambda: PPCA(q=Q_PPCA, semente=0)}
-NOMES_DOS_IMPUTADORES = {"porcao_media": "Porção média", "ppca": f"PPCA (q = {Q_PPCA})"}
+Q = 5
+IMPUTADORES = {
+    "porcao_media": PorcaoMedia,
+    "ppca": lambda: PPCA(q=Q, semente=0),
+    "fa": lambda: FA(q=Q, semente=0),
+}
+NOMES_DOS_IMPUTADORES = {"porcao_media": "Porção média", "ppca": f"PPCA (q = {Q})", "fa": f"FA (q = {Q})"}
 REFERENCIA_TAXA_ZERO = "referencia_taxa_0"
 SEM_IMPUTADOR = "nenhum"
 FLUXO_VALIDACAO = 0
@@ -86,14 +97,17 @@ def gerador(semente: int, indice_taxa: int, fluxo: int) -> np.random.Generator:
     return np.random.default_rng((int(semente), indice_taxa, fluxo))
 
 
-def _iteracoes(imputador) -> float:
-    return getattr(imputador, "n_iteracoes_", np.nan)
+def _diagnostico(imputador) -> dict[str, float]:
+    no_piso = getattr(imputador, "gavetas_no_piso_", None)
+    return {"iteracoes": getattr(imputador, "n_iteracoes_", np.nan),
+            "gavetas_no_piso": np.nan if no_piso is None else len(no_piso)}
 
 
-def ajustar_imputadores(tr: Conjunto, dobras: np.ndarray) -> tuple[dict[str, Ajustado], pd.DataFrame]:
+def ajustar_imputadores(tr: Conjunto, dobras: np.ndarray, nomes: list[str]) -> tuple[dict[str, Ajustado], pd.DataFrame]:
     sem_mascara = np.zeros_like(tr.P)
     ajustados, tempos = {}, []
-    for nome, novo in IMPUTADORES.items():
+    for nome in nomes:
+        novo = IMPUTADORES[nome]
         inicio = time.perf_counter()
         completo = novo().fit(ocultar(tr.G, sem_mascara), tr.P, sem_mascara, tr.C)
         meio = time.perf_counter()
@@ -101,10 +115,11 @@ def ajustar_imputadores(tr: Conjunto, dobras: np.ndarray) -> tuple[dict[str, Aju
         fim = time.perf_counter()
         ajustados[nome] = Ajustado(completo, das_dobras)
         tempos += [
-            {"imputador": nome, "etapa": "treino completo", "segundos": meio - inicio, "iteracoes": _iteracoes(completo)},
-            *({"imputador": nome, "etapa": f"dobra {f}", "segundos": np.nan, "iteracoes": _iteracoes(i)}
+            {"imputador": nome, "etapa": "treino completo", "segundos": meio - inicio, **_diagnostico(completo)},
+            *({"imputador": nome, "etapa": f"dobra {f}", "segundos": np.nan, **_diagnostico(i)}
               for f, i in enumerate(das_dobras)),
-            {"imputador": nome, "etapa": f"{N_DOBRAS} dobras", "segundos": fim - meio, "iteracoes": np.nan},
+            {"imputador": nome, "etapa": f"{N_DOBRAS} dobras", "segundos": fim - meio,
+             "iteracoes": np.nan, "gavetas_no_piso": np.nan},
         ]
         print(f"  {nome}: completo {meio - inicio:.1f} s | {N_DOBRAS} dobras {fim - meio:.1f} s", flush=True)
     return ajustados, pd.DataFrame(tempos)
@@ -165,6 +180,17 @@ def _chaves_primeiro(tabela: pd.DataFrame, chaves: list[str]) -> pd.DataFrame:
     return tabela[chaves + [c for c in tabela.columns if c not in chaves]].reset_index(drop=True)
 
 
+def juntar(novas: pd.DataFrame, arquivo: Path, executados: list[str]) -> pd.DataFrame:
+    """Linhas existentes dos imputadores não executados, e a referência da taxa 0 já gravada, mais as novas."""
+    if not arquivo.exists():
+        return novas
+    existentes = pd.read_csv(arquivo, float_precision="round_trip")  # o leitor padrão muda o último dígito
+    mantidas = existentes[~existentes.imputador.isin(executados)]
+    if (mantidas.imputador == SEM_IMPUTADOR).any():
+        novas = novas[novas.imputador != SEM_IMPUTADOR]
+    return pd.concat([mantidas, novas], ignore_index=True)
+
+
 def resumir(metricas: pd.DataFrame) -> pd.DataFrame:
     valores = metricas.drop(columns=["semente", "S"])
     resumo = valores.groupby(["imputador", "taxa", "braco"]).agg(["mean", "std"])
@@ -198,29 +224,39 @@ def figura(resumo: pd.DataFrame, metrica: str, titulo: str, eixo_y: str, referen
 
 
 def main() -> None:
+    argumentos = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    argumentos.add_argument("--imputadores", nargs="+", choices=list(IMPUTADORES), default=list(IMPUTADORES))
+    executados = argumentos.parse_args().imputadores
+    parcial = set(executados) != set(IMPUTADORES)
+
     inicio = time.perf_counter()
     tr, va, taxas, sementes, gavetas = treino_e_validacao()
-    print(f"treino: {len(tr.y):,} refeições | validação: {len(va.y):,} refeições | S = {S}", flush=True)
+    print(f"treino: {len(tr.y):,} refeições | validação: {len(va.y):,} refeições | S = {S} | "
+          f"imputadores: {', '.join(executados)}", flush=True)
     regressor = RegressaoLinearBayesiana().fit(montar_Z(tr.G, tr.P, tr.C), tr.y)
     dobras = dobras_por_pessoa(tr.pessoas, np.random.default_rng(0))
 
     print("ajuste dos imputadores:", flush=True)
-    ajustados, tempos = ajustar_imputadores(tr, dobras)
+    ajustados, tempos = ajustar_imputadores(tr, dobras, executados)
     print("curva por taxa:", flush=True)
-    metricas, ocultas, imputacao, por_gaveta = medir(tr, va, ajustados, regressor, dobras, taxas, sementes, gavetas)
+    tabelas = dict(zip(
+        ("propagacao_metricas", "propagacao_por_ocultas", "imputacao_metricas", "imputacao_por_gaveta"),
+        medir(tr, va, ajustados, regressor, dobras, taxas, sementes, gavetas),
+    ))
+    tabelas["imputadores_ajuste"] = tempos
+    if parcial:
+        tabelas = {nome: juntar(tabela, SAIDA / f"{nome}.csv", executados) for nome, tabela in tabelas.items()}
+    metricas, imputacao = tabelas["propagacao_metricas"], tabelas["imputacao_metricas"]
     resumo = resumir(metricas)
 
     figuras = SAIDA / "figuras"
     figuras.mkdir(parents=True, exist_ok=True)
-    tempos.to_csv(SAIDA / "imputadores_ajuste.csv", index=False)
-    metricas.to_csv(SAIDA / "propagacao_metricas.csv", index=False)
-    ocultas.to_csv(SAIDA / "propagacao_por_ocultas.csv", index=False)
+    for nome, tabela in tabelas.items():
+        tabela.to_csv(SAIDA / f"{nome}.csv", index=False)
     resumo.to_csv(SAIDA / "propagacao_resumo.csv", index=False)
-    imputacao.to_csv(SAIDA / "imputacao_metricas.csv", index=False)
-    por_gaveta.to_csv(SAIDA / "imputacao_por_gaveta.csv", index=False)
 
     picp_taxa_zero = resumo.query("taxa == 0 and braco == @PLUGIN").picp_media.iloc[0]
-    tamanho = {"width": 12, "height": 5.5, "dpi": 200, "verbose": False}
+    tamanho = {"width": 16, "height": 5.5, "dpi": 200, "verbose": False}
     figura(resumo, "picp", "Cobertura do intervalo de 90%", "PICP",
            {"nominal (90%)": 0.9, f"taxa 0 ({100 * picp_taxa_zero:.1f}%)".replace(".", ","): picp_taxa_zero}
            ).save(figuras / "propagacao_picp.png", **tamanho)
