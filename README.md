@@ -54,10 +54,11 @@ uv run python -m amaprob.experiments.taxa_zero   # teste de sanidade na taxa 0 (
 Ajusta a regressão linear bayesiana no treino, mede na validação e grava em `results/` as métricas (`taxa_zero_metricas.csv`), a cobertura por faixa da previsão (`taxa_zero_cobertura.csv`) e os tempos de ajuste (`tempos_ajuste.csv`). O conjunto de teste não é lido.
 
 ```bash
-uv run python -m amaprob.experiments.propagacao  # plug-in × propagação por taxa e imputador (cerca de 1 h)
+uv run python -m amaprob.experiments.propagacao                 # plug-in × propagação por taxa e imputador (cerca de 1 h 30)
+uv run python -m amaprob.experiments.propagacao --imputadores fa  # só a FA, juntando aos CSVs existentes (cerca de 27 min)
 ```
 
-Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação nas taxas 0 a 1 e nas 3 sementes de máscara. Grava em `results/`:
+Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação nas taxas 0 a 1 e nas 3 sementes de máscara, para a porção média, o PPCA e a FA. Com `--imputadores`, as linhas dos outros imputadores e a referência da taxa 0 já gravadas ficam como estão. Grava em `results/`:
 
 | Arquivo | Conteúdo |
 |---|---|
@@ -66,10 +67,10 @@ Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação 
 | `propagacao_por_ocultas.csv` | métricas por número de gavetas ocultas na refeição, com a referência da taxa 0 |
 | `propagacao_S.csv` | comparação de S = 100 e S = 500 amostras, com os tempos (registro; não é regravado) |
 | `imputacao_metricas.csv`, `imputacao_por_gaveta.csv` | Parte 1: erro e calibração da imputação nas células ocultas, por imputador, taxa e semente |
-| `imputadores_ajuste.csv` | tempo e iterações do ajuste de cada imputador |
+| `imputadores_ajuste.csv` | tempo, iterações e gavetas no piso de ruído (FA) do ajuste de cada imputador |
 | `figuras/propagacao_picp.png`, `figuras/propagacao_mpiw.png` | cobertura e largura do intervalo de 90% pela taxa, um painel por imputador |
 
-A comparação de S ocupa cerca de 14 min; cada rodada da curva, cerca de 80 s.
+Cada rodada da curva leva cerca de 80 s por imputador. Os ajustes no treino completo e nas 5 dobras levam cerca de 16 min com o PPCA e 5 min com a FA.
 
 ## Testes
 

@@ -56,7 +56,7 @@ Na taxa 0, os três braços SHALL coincidir com a previsão direta do regressor 
 - **THEN** média e variância dos três braços coincidem com as do regressor de referência em toda refeição da validação, até o erro de ponto flutuante
 
 ### Requirement: Curva por taxa e braço
-O experimento SHALL rodar as taxas 0; 0,25; 0,5; 0,75 e 1 com as 3 sementes de máscara, para cada imputador (porção média e PPCA) na mesma execução, ajustar no treino e medir na validação. Ele MUST NOT ler as refeições de teste (Regra 6). SHALL gravar as métricas por imputador, taxa, semente e braço, a leitura por número de quantidades ocultas, o resumo com média e desvio entre as sementes e as figuras de PICP e MPIW pela taxa, com um painel por imputador.
+O experimento SHALL rodar as taxas 0; 0,25; 0,5; 0,75 e 1 com as 3 sementes de máscara, para cada imputador (porção média, PPCA e FA), ajustar no treino e medir na validação. Ele MUST NOT ler as refeições de teste (Regra 6). SHALL gravar as métricas por imputador, taxa, semente e braço, a leitura por número de quantidades ocultas, o resumo com média e desvio entre as sementes e as figuras de PICP e MPIW pela taxa, com um painel por imputador.
 
 #### Scenario: Conjuntos usados
 - **WHEN** o experimento roda
@@ -91,3 +91,14 @@ Para cada taxa e semente, a leitura por número de ocultas SHALL incluir a previ
 #### Scenario: Referência na taxa 0
 - **WHEN** a taxa é 0
 - **THEN** a linha de referência coincide com as linhas dos três braços de cada imputador
+
+### Requirement: Execução parcial com junção
+O experimento SHALL aceitar a escolha dos imputadores da execução; sem escolha, roda todos. Numa execução parcial, as linhas dos imputadores executados SHALL ser acrescentadas aos resultados existentes, e as linhas dos imputadores não executados e da referência da taxa 0 MUST NOT ser alteradas. O resumo e as figuras SHALL ser recalculados sobre a tabela juntada.
+
+#### Scenario: Só um imputador novo
+- **WHEN** o experimento roda só com a FA sobre resultados que já têm o baseline e o PPCA
+- **THEN** os CSVs passam a ter as linhas da FA, as linhas do baseline, do PPCA e da referência da taxa 0 ficam iguais às de antes, e não há linha duplicada por imputador, taxa, semente e braço
+
+#### Scenario: Mesmo resultado que a execução completa
+- **WHEN** um imputador roda sozinho e numa execução completa, com as mesmas máscaras e sementes
+- **THEN** as métricas dele são idênticas nos dois casos, porque os geradores dependem só da semente, da taxa e do fluxo

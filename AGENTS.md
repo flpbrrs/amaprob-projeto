@@ -101,7 +101,7 @@ class Imputer(Protocol):
 |---|---|---|
 | Porção média por gaveta | Baseline de referência | NumPy |
 | PPCA (Análise de Componentes Principais Probabilística) via EM com dados faltantes | Obrigatório | NumPy, do zero (o scikit-learn não trata faltantes); `imputation/ppca.py`, q = 5 de partida |
-| FA (Análise Fatorial) via EM com dados faltantes | Obrigatório | NumPy; difere do PPCA só no ruído (diagonal em vez de isotrópico), reaproveita o código |
+| FA (Análise Fatorial) via EM com dados faltantes | Obrigatório | NumPy, do zero; `imputation/fa.py`, q = 5 de partida. Difere do PPCA só no ruído (diagonal em vez de isotrópico); módulo próprio, para não mudar o caminho numérico do PPCA. Piso no ruído de cada gaveta: 0,1% da variância observada, contra ψ → 0 (caso de Heywood) |
 | VAE (Autoencoder Variacional) com máscara | Extra | PyTorch; entrada = `X` observado + `P` + `M` + `C` |
 
 **Gavetas ausentes como condicionantes** (PPCA e FA): a verossimilhança de cada refeição usa só as gavetas observadas (`P = 1` e `M = 0`); gavetas ausentes não entram como zero. O modelo aprende o tamanho das porções dado que a gaveta está presente, como o baseline. Motivos: 89% das células são zero, e toda gaveta imputada está presente (`M ⊆ P`); com zeros, as porções imputadas sairiam puxadas para zero. A extensão com a média dependendo de `P` e `C` está em `backlog/decisions.md`.
@@ -132,7 +132,7 @@ class ProbRegressor(Protocol):
 | Regressão linear bayesiana | Obrigatório | Forma fechada conjugada em NumPy |
 | Processo Gaussiano esparso (SVGP) | Obrigatório | GPyTorch |
 
-**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`), com o imputador como dimensão (porção média e PPCA na mesma execução, com as mesmas máscaras e geradores) e S = 100 amostras fixo (comparação com S = 500 em `results/propagacao_S.csv`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
+**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`), com o imputador como dimensão (porção média, PPCA e FA, com as mesmas máscaras e geradores; `--imputadores` roda só alguns e junta as linhas deles aos CSVs existentes) e S = 100 amostras fixo (comparação com S = 500 em `results/propagacao_S.csv`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
 - **Plug-in:** preenche cada quantidade oculta com a média das amostras **em gramas** e prevê uma vez. A média do log convertida (`expm1` da média) subestimaria as gramas, e o plug-in perderia por viés de conversão, não pela incerteza.
 - **Plug-in recalibrado (margem fixa):** a mesma entrada, num regressor ajustado com o treino mascarado e imputado da mesma forma (ver §4). A variância de ruído absorve o erro de imputação como folga igual para toda refeição. Só com a regressão linear bayesiana. Os imputadores das 5 dobras são ajustados uma vez por imputador: sem máscara, o ajuste não depende da taxa nem da semente.
 - **Propagação:** prevê para cada amostra e combina as preditivas na mistura `(1/S) Σ N(μ_s, σ²_s)`.

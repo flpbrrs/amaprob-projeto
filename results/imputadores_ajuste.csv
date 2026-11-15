@@ -1,15 +1,22 @@
-imputador,etapa,segundos,iteracoes
-porcao_media,treino completo,0.13335469999947236,
-porcao_media,dobra 0,,
-porcao_media,dobra 1,,
-porcao_media,dobra 2,,
-porcao_media,dobra 3,,
-porcao_media,dobra 4,,
-porcao_media,5 dobras,0.7008559000005334,
-ppca,treino completo,194.45405179999943,486.0
-ppca,dobra 0,,477.0
-ppca,dobra 1,,496.0
-ppca,dobra 2,,500.0
-ppca,dobra 3,,469.0
-ppca,dobra 4,,500.0
-ppca,5 dobras,791.1987625000002,
+imputador,etapa,segundos,iteracoes,gavetas_no_piso
+porcao_media,treino completo,0.13335469999947236,,
+porcao_media,dobra 0,,,
+porcao_media,dobra 1,,,
+porcao_media,dobra 2,,,
+porcao_media,dobra 3,,,
+porcao_media,dobra 4,,,
+porcao_media,5 dobras,0.7008559000005334,,
+ppca,treino completo,194.45405179999943,486.0,
+ppca,dobra 0,,477.0,
+ppca,dobra 1,,496.0,
+ppca,dobra 2,,500.0,
+ppca,dobra 3,,469.0,
+ppca,dobra 4,,500.0,
+ppca,5 dobras,791.1987625000002,,
+fa,treino completo,60.79237519999879,152.0,0.0
+fa,dobra 0,,167.0,0.0
+fa,dobra 1,,161.0,0.0
+fa,dobra 2,,147.0,0.0
+fa,dobra 3,,146.0,0.0
+fa,dobra 4,,152.0,0.0
+fa,5 dobras,244.12274280000202,,
