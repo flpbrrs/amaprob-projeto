@@ -5,12 +5,14 @@ description = "Estimação probabilística do carboidrato de refeições brasile
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "gpytorch>=1.15.2",
     "matplotlib>=3.11.2",
     "numpy",
     "pandas",
     "plotnine>=0.15.9",
     "scipy>=1.18.1",
     "scoringrules>=0.11.0",
+    "torch>=2.15.0",
 ]
 
 [build-system]

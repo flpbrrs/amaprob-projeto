@@ -77,7 +77,7 @@ Violações destas regras invalidam o experimento. Sinalize imediatamente qualqu
 - **Mecanismo:** aleatório (MCAR), declarado como limitação. O mascaramento é por gaveta (esconde todos os itens dela de uma vez), também declarado.
 - **Repetições:** 3 sementes por taxa; reportar média e desvio.
 - **Split:** treino / validação / teste = 70/15/15 por `person_id`, semente 0 (`src/amaprob/data/splits.py`).
-- **Escala:** amostra estratificada de refeições para os laços pesados (SVGP, otimização bayesiana). Treino em CPU.
+- **Escala:** amostra estratificada de refeições para os laços pesados (otimização bayesiana). O SVGP roda no treino e na validação inteiros (ajuste de ~4 min, previsão de ~36 s por rodada da curva). Treino em CPU.
 
 ---
 
@@ -127,12 +127,14 @@ class ProbRegressor(Protocol):
 
 **Modelos:**
 
-| Modelo | Escopo | Implementação sugerida |
+| Modelo | Escopo | Implementação |
 |---|---|---|
-| Regressão linear bayesiana | Obrigatório | Forma fechada conjugada em NumPy |
-| Processo Gaussiano esparso (SVGP) | Obrigatório | GPyTorch |
+| Regressão linear bayesiana | Obrigatório | Forma fechada conjugada em NumPy (`regression/blr.py`) |
+| Processo Gaussiano Variacional Esparso (SVGP) | Obrigatório | GPyTorch (`regression/svgp.py`): média linear + kernel RBF com um comprimento por coluna, sobre entradas padronizadas; M = 256 pontos indutores aprendidos, 60 épocas de minibatch na ELBO, `float64` |
 
-**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`), com o imputador como dimensão (porção média, PPCA e FA, com as mesmas máscaras e geradores; `--imputadores` roda só alguns e junta as linhas deles aos CSVs existentes) e S = 100 amostras fixo (comparação com S = 500 em `results/propagacao_S.csv`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
+A média linear faz do SVGP uma "regressão linear + correção não linear", e a comparação com a regressão linear bayesiana responde se a não linearidade ajuda. Com 10 épocas, a ELBO ainda subia e o ruído ficava no dobro do da regressão linear; com 60, ela assenta.
+
+**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`), com o regressor (regressão linear bayesiana e SVGP) e o imputador (porção média, PPCA e FA) como dimensões, com as mesmas máscaras e geradores (`--regressores` e `--imputadores` rodam só alguns pares e juntam as linhas deles aos CSVs existentes), e S = 100 amostras fixo (comparação com S = 500 em `results/propagacao_S.csv`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
 - **Plug-in:** preenche cada quantidade oculta com a média das amostras **em gramas** e prevê uma vez. A média do log convertida (`expm1` da média) subestimaria as gramas, e o plug-in perderia por viés de conversão, não pela incerteza.
 - **Plug-in recalibrado (margem fixa):** a mesma entrada, num regressor ajustado com o treino mascarado e imputado da mesma forma (ver §4). A variância de ruído absorve o erro de imputação como folga igual para toda refeição. Só com a regressão linear bayesiana. Os imputadores das 5 dobras são ajustados uma vez por imputador: sem máscara, o ajuste não depende da taxa nem da semente.
 - **Propagação:** prevê para cada amostra e combina as preditivas na mistura `(1/S) Σ N(μ_s, σ²_s)`.
