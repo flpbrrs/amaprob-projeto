@@ -46,12 +46,23 @@ O EM garante que ela não diminui entre iterações enquanto o piso não é ativ
 Amostragem das ocultas H_n: z ~ N(E[z_n], A_n⁻¹) e x_H = μ_H + W_H z + √ψ_H ⊙ v, v ~ N(0, I).
 É a condicional exata x_H | x_O. Sem observados, a posterior é a priori e x_H segue a marginal
 N(μ_H, W_H W_Hᵀ + Ψ_H). As amostras são truncadas em 0, como no baseline.
+
+Média condicional (opção `media_condicional`): a mesma do PPCA (derivação em `ppca.py`), μ_k vira
+b_kᵀ u_n, com u_n = [1; φ(P_n); φ(C_n)] e priori N(0, 1/α) nos coeficientes de P e C. Como o
+ruído é por gaveta, a penalização entra na regressão de cada gaveta escalada pelo ψ_k da iteração
+anterior,
+
+    [w_k; b_k] = (Σ_{n: k∈O_n} E[z̃_n z̃_nᵀ] + ψ_k α D)⁻¹ Σ_{n: k∈O_n} x_nk E[z̃_n]
+
+e depois ψ_k sai do resíduo esperado, com o mesmo piso. O EM maximiza a log-verossimilhança menos
+(α/2) Σ_k ‖b_k sem o intercepto‖².
 """
 
 from dataclasses import dataclass
 
 import numpy as np
 
+from amaprob.imputation import media_condicional as mc
 from amaprob.imputation.ppca import observados
 
 PISO_RELATIVO = 0.001
@@ -68,11 +79,14 @@ class _Posterior:
 
 
 class FA:
-    def __init__(self, q: int = 5, semente: int = 0, tolerancia: float = 1e-6, max_iteracoes: int = 500):
+    def __init__(self, q: int = 5, semente: int = 0, tolerancia: float = 1e-6, max_iteracoes: int = 500,
+                 media_condicional: bool = False, alfa: float = mc.ALFA):
         self.q = q
         self.semente = semente
         self.tolerancia = tolerancia
         self.max_iteracoes = max_iteracoes
+        self.media_condicional = media_condicional
+        self.alfa = alfa
 
     def fit(self, X: np.ndarray, P: np.ndarray, M: np.ndarray, C: np.ndarray) -> "FA":
         O = observados(P, M)
@@ -86,28 +100,47 @@ class FA:
         self.piso_ = np.where(tem_observado, np.maximum(PISO_RELATIVO * variancia, PISO_ABSOLUTO), RUIDO_SEM_OBSERVADOS)
         self.psi_ = np.where(tem_observado, np.maximum(variancia, self.piso_), RUIDO_SEM_OBSERVADOS)
         self.W_ = rng.normal(0.0, 0.1, size=(X_O.shape[1], self.q)) * tem_observado[:, None]
+        U = blocos = None
+        if self.media_condicional:
+            self.padronizacao_ = mc.ajustar_padronizacao(P, C)
+            U = mc.montar_u(P, C, self.padronizacao_)
+            blocos = mc.blocos_fixos(U, X_O, O)
+            self.coeficientes_media_ = mc.coeficientes_iniciais(blocos, self.psi_, tem_observado, self.alfa)
+            residuo = ((X_O - self._media(U)) ** 2 * O).sum(axis=0) / n_por_gaveta
+            self.psi_ = np.where(tem_observado, np.maximum(residuo, self.piso_), RUIDO_SEM_OBSERVADOS)
 
-        posterior = self._passo_e(X_O, O)
-        historico = [posterior.log_verossimilhanca]
+        posterior = self._passo_e(X_O, O, U)
+        verossimilhancas, objetivos = [posterior.log_verossimilhanca], [self._objetivo(posterior)]
         for _ in range(self.max_iteracoes):
-            self._passo_m(X_O, O, posterior, tem_observado, n_por_gaveta)
-            posterior = self._passo_e(X_O, O)
-            historico.append(posterior.log_verossimilhanca)
-            if historico[-1] - historico[-2] <= self.tolerancia * abs(historico[-2]):
+            self._passo_m(X_O, O, posterior, tem_observado, n_por_gaveta, U, blocos)
+            posterior = self._passo_e(X_O, O, U)
+            verossimilhancas.append(posterior.log_verossimilhanca)
+            objetivos.append(self._objetivo(posterior))
+            if objetivos[-1] - objetivos[-2] <= self.tolerancia * abs(objetivos[-2]):
                 break
 
-        self.historico_log_verossimilhanca_ = np.array(historico)
-        self.n_iteracoes_ = len(historico) - 1
+        self.historico_log_verossimilhanca_ = np.array(verossimilhancas)
+        self.historico_objetivo_ = np.array(objetivos)
+        self.n_iteracoes_ = len(objetivos) - 1
         self.gavetas_no_piso_ = np.flatnonzero(tem_observado & (self.psi_ <= self.piso_))
         return self
 
-    def _passo_e(self, X_O: np.ndarray, O: np.ndarray) -> _Posterior:
+    def _media(self, U: np.ndarray | None) -> np.ndarray:
+        """μ (K,) com a média fixa; B u_n por refeição (N, K) com a média condicional."""
+        return self.media_ if U is None else U @ self.coeficientes_media_.T
+
+    def _objetivo(self, posterior: _Posterior) -> float:
+        if not self.media_condicional:
+            return posterior.log_verossimilhanca
+        return posterior.log_verossimilhanca - mc.penalizacao(self.coeficientes_media_, self.alfa)
+
+    def _passo_e(self, X_O: np.ndarray, O: np.ndarray, U: np.ndarray | None = None) -> _Posterior:
         N, K = X_O.shape
         q, psi = self.q, self.psi_
         W_sobre_psi = self.W_ / psi[:, None]  # linhas de Ψ⁻¹ W
         produtos_W = (self.W_[:, :, None] * W_sobre_psi[:, None, :]).reshape(K, q * q)  # w_k w_kᵀ / ψ_k
         A = np.eye(q) + (O @ produtos_W).reshape(N, q, q)  # I + W_Oᵀ Ψ_O⁻¹ W_O
-        R = (X_O - self.media_) * O
+        R = (X_O - self._media(U)) * O
         b = R @ W_sobre_psi  # W_Oᵀ Ψ_O⁻¹ r_n
         A_inv = np.linalg.inv(A)
         media_z = np.einsum("nij,nj->ni", A_inv, b)
@@ -119,12 +152,19 @@ class FA:
         return _Posterior(A, A_inv, media_z, float(log_verossimilhanca))
 
     def _passo_m(
-        self, X_O: np.ndarray, O: np.ndarray, posterior: _Posterior, tem_observado: np.ndarray, n_por_gaveta: np.ndarray
+        self, X_O: np.ndarray, O: np.ndarray, posterior: _Posterior, tem_observado: np.ndarray, n_por_gaveta: np.ndarray,
+        U: np.ndarray | None = None, blocos: mc.BlocosFixos | None = None,
     ) -> None:
         N, K = X_O.shape
         q = self.q
         Ez = posterior.media_z
         Ezz = posterior.A_inv + Ez[:, :, None] * Ez[:, None, :]
+
+        if U is not None:
+            W, B, residuo = mc.passo_m(Ez, Ezz, U, X_O, O, blocos, self.psi_, tem_observado, self.alfa)
+            self.W_, self.coeficientes_media_ = W, B
+            self.psi_ = np.where(tem_observado, np.maximum(residuo / n_por_gaveta, self.piso_), RUIDO_SEM_OBSERVADOS)
+            return
 
         Ez_aum = np.c_[Ez, np.ones(N)]  # E[z̃]
         Ezz_aum = np.empty((N, q + 1, q + 1))  # E[z̃ z̃ᵀ] = [[E[zzᵀ], E[z]], [E[z]ᵀ, 1]]
@@ -152,7 +192,8 @@ class FA:
         M = np.asarray(M, dtype=bool)
         O = observados(P, M)
         X_O = np.where(O, X, 0.0)
-        posterior = self._passo_e(X_O, O)
+        U = mc.montar_u(P, C, self.padronizacao_) if self.media_condicional else None
+        posterior = self._passo_e(X_O, O, U)
 
         # z = E[z] + L⁻ᵀ u, com A = L Lᵀ, tem covariância A⁻¹.
         L_inv_T = np.swapaxes(np.linalg.inv(np.linalg.cholesky(posterior.A)), 1, 2)
@@ -161,7 +202,7 @@ class FA:
 
         linhas, colunas = np.nonzero(M)
         ocultos = (
-            self.media_[colunas]
+            np.broadcast_to(self._media(U), X_O.shape)[linhas, colunas]
             + np.einsum("shq,hq->sh", z[:, linhas], self.W_[colunas])
             + np.sqrt(self.psi_[colunas]) * rng.standard_normal((n_samples, len(linhas)))
         )

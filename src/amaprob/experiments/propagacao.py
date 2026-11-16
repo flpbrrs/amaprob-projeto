@@ -61,8 +61,18 @@ IMPUTADORES = {
     "porcao_media": PorcaoMedia,
     "ppca": lambda: PPCA(q=Q, semente=0),
     "fa": lambda: FA(q=Q, semente=0),
+    "porcao_condicional": lambda: PorcaoMedia(media_condicional=True),
+    "ppca_condicional": lambda: PPCA(q=Q, semente=0, media_condicional=True),
+    "fa_condicional": lambda: FA(q=Q, semente=0, media_condicional=True),
 }
-NOMES_DOS_IMPUTADORES = {"porcao_media": "Porção média", "ppca": f"PPCA (q = {Q})", "fa": f"FA (q = {Q})"}
+NOMES_DOS_IMPUTADORES = {
+    "porcao_media": "Porção média",
+    "ppca": f"PPCA (q = {Q})",
+    "fa": f"FA (q = {Q})",
+    "porcao_condicional": "Porção média cond.",
+    "ppca_condicional": f"PPCA cond. (q = {Q})",
+    "fa_condicional": f"FA cond. (q = {Q})",
+}
 REGRESSAO_LINEAR = "blr"
 REGRESSORES = {
     REGRESSAO_LINEAR: RegressaoLinearBayesiana,
@@ -334,8 +344,9 @@ def main() -> None:
 
     picp_taxa_zero = (resumo.query("taxa == 0 and braco == @PLUGIN").groupby("regressor", sort=False).picp_media.first()
                       .rename("valor").reset_index())
-    n_regressores = resumo.regressor.nunique()
-    tamanho = {"width": 16, "height": 1 + 4.5 * n_regressores, "dpi": 200, "verbose": False}
+    n_regressores, n_imputadores = resumo.regressor.nunique(), resumo.imputador.nunique()
+    tamanho = {"width": 1 + 4 * n_imputadores, "height": 1 + 4.5 * n_regressores, "dpi": 200, "verbose": False,
+               "limitsize": False}
     figura(resumo, "picp", "Cobertura do intervalo de 90%", "PICP", nominal=0.9, taxa_zero=picp_taxa_zero
            ).save(figuras / "propagacao_picp.png", **tamanho)
     figura(resumo, "mpiw_g", "Largura do intervalo de 90%", "MPIW (g)"

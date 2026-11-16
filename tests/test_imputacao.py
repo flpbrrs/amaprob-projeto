@@ -10,7 +10,14 @@ from amaprob.imputation.fa import FA
 from amaprob.imputation.ppca import PPCA
 
 N, K, S = 2_000, 6, 20
-IMPUTADORES = {"porcao_media": PorcaoMedia, "ppca": lambda: PPCA(q=2), "fa": lambda: FA(q=2)}
+IMPUTADORES = {
+    "porcao_media": PorcaoMedia,
+    "ppca": lambda: PPCA(q=2),
+    "fa": lambda: FA(q=2),
+    "porcao_condicional": lambda: PorcaoMedia(media_condicional=True),
+    "ppca_condicional": lambda: PPCA(q=2, media_condicional=True),
+    "fa_condicional": lambda: FA(q=2, media_condicional=True),
+}
 
 
 @pytest.fixture(params=list(IMPUTADORES), scope="module")
