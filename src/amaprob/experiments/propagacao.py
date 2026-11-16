@@ -1,24 +1,29 @@
 """Plug-in × plug-in recalibrado × propagação em função da taxa de quantidades ocultas, por regressor e imputador.
 
-Cada regressor (regressão linear bayesiana e SVGP) e cada imputador (porção média, PPCA e FA) são
-ajustados uma vez no treino completo. O braço recalibrado existe só com a regressão linear, e os
+Cada regressor (regressão linear bayesiana e SVGP) e cada imputador (porção média, PPCA e FA, com e
+sem média condicional) são ajustados uma vez no treino completo, com os hiperparâmetros adotados em
+`configs/hiperparametros.json`. O braço recalibrado existe só com a regressão linear, e os
 imputadores das 5 dobras dele também são ajustados uma vez por imputador. As máscaras definem o que
-fica oculto na validação. O teste nunca é lido (Regra 6).
+fica oculto no conjunto medido: a validação (padrão, em `results/`) ou, com `--conjunto teste`, o
+teste (em `results/teste/`). Nada é ajustado com o conjunto medido; na validação, o teste nunca é
+lido (Regra 6).
 
-Com a regressão linear, grava também as métricas da Parte 1 (imputação nas células ocultas da
-validação), que não dependem do regressor. A referência da taxa 0 por número de ocultas é gravada
-por regressor.
+Com a regressão linear, grava também as métricas da Parte 1 (imputação nas células ocultas do
+conjunto medido), que não dependem do regressor. A referência da taxa 0 por número de ocultas é
+gravada por regressor.
 
 Com `--regressores` e `--imputadores`, só os pares escolhidos rodam, e as linhas deles entram nos
-CSVs existentes; as dos outros pares e as referências da taxa 0 já gravadas ficam como estavam.
-Vale porque os geradores dependem só da semente, da taxa e do fluxo, e não do regressor nem do
-imputador.
+CSVs existentes do mesmo conjunto; as dos outros pares e as referências da taxa 0 já gravadas ficam
+como estavam. Vale porque os geradores dependem só da semente, da taxa e do fluxo, e não do
+regressor nem do imputador.
 
-Uso: uv run python -m amaprob.experiments.propagacao [--regressores svgp] [--imputadores fa]
+Uso: uv run python -m amaprob.experiments.propagacao [--conjunto teste] [--regressores svgp] [--imputadores fa]
 """
 
 import argparse
+import json
 import time
+from collections.abc import Callable
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -29,6 +34,7 @@ from plotnine import (
 )
 
 from amaprob.data.dataset import RAIZ, carregar_mascaras, carregar_refeicoes
+from amaprob.data.splits import TESTE, VALIDACAO
 from amaprob.evaluation.metricas import (
     avaliar_imputacao, avaliar_mistura, celulas_de_imputacao, imputacao_por_gaveta, intervalo, por_ocultas,
 )
@@ -54,31 +60,51 @@ from amaprob.regression.propagation import (
 from amaprob.regression.svgp import SVGP
 
 SAIDA = RAIZ / "results"
+CONFIGURACAO = RAIZ / "configs" / "hiperparametros.json"
 S = 100
-Q = 5
-M_INDUTORES = 256
-IMPUTADORES = {
-    "porcao_media": PorcaoMedia,
-    "ppca": lambda: PPCA(q=Q, semente=0),
-    "fa": lambda: FA(q=Q, semente=0),
-    "porcao_condicional": lambda: PorcaoMedia(media_condicional=True),
-    "ppca_condicional": lambda: PPCA(q=Q, semente=0, media_condicional=True),
-    "fa_condicional": lambda: FA(q=Q, semente=0, media_condicional=True),
-}
-NOMES_DOS_IMPUTADORES = {
-    "porcao_media": "Porção média",
-    "ppca": f"PPCA (q = {Q})",
-    "fa": f"FA (q = {Q})",
-    "porcao_condicional": "Porção média cond.",
-    "ppca_condicional": f"PPCA cond. (q = {Q})",
-    "fa_condicional": f"FA cond. (q = {Q})",
-}
 REGRESSAO_LINEAR = "blr"
-REGRESSORES = {
-    REGRESSAO_LINEAR: RegressaoLinearBayesiana,
-    "svgp": lambda: SVGP(n_indutores=M_INDUTORES, semente=0),
-}
-NOMES_DOS_REGRESSORES = {REGRESSAO_LINEAR: "Regressão linear bayesiana", "svgp": f"SVGP (M = {M_INDUTORES})"}
+NOMES_DOS_CONJUNTOS = {VALIDACAO: "Validação", TESTE: "Teste"}
+
+
+def ler_configuracao(arquivo: Path = CONFIGURACAO) -> dict[str, dict]:
+    """Hiperparâmetros adotados na Parte 3; modelo ou botão sem entrada fica com o valor de partida."""
+    return json.loads(arquivo.read_text(encoding="utf-8")) if arquivo.exists() else {}
+
+
+def fabricas_de_imputadores(configuracao: dict[str, dict]) -> dict[str, Callable[[], Imputer]]:
+    botoes = lambda nome: configuracao.get(nome, {})
+    return {
+        "porcao_media": lambda: PorcaoMedia(**botoes("porcao_media")),
+        "ppca": lambda: PPCA(semente=0, **botoes("ppca")),
+        "fa": lambda: FA(semente=0, **botoes("fa")),
+        "porcao_condicional": lambda: PorcaoMedia(media_condicional=True, **botoes("porcao_condicional")),
+        "ppca_condicional": lambda: PPCA(semente=0, media_condicional=True, **botoes("ppca_condicional")),
+        "fa_condicional": lambda: FA(semente=0, media_condicional=True, **botoes("fa_condicional")),
+    }
+
+
+def fabricas_de_regressores(configuracao: dict[str, dict]) -> dict[str, Callable[[], ProbRegressor]]:
+    return {
+        REGRESSAO_LINEAR: RegressaoLinearBayesiana,
+        "svgp": lambda: SVGP(semente=0, **configuracao.get("svgp", {})),
+    }
+
+
+def nomes_dos_imputadores(fabricas: dict[str, Callable[[], Imputer]]) -> dict[str, str]:
+    base = {"porcao_media": "Porção média", "ppca": "PPCA", "fa": "FA", "porcao_condicional": "Porção média cond.",
+            "ppca_condicional": "PPCA cond.", "fa_condicional": "FA cond."}
+    com_q = {nome: getattr(fabrica(), "q", None) for nome, fabrica in fabricas.items()}
+    return {nome: base[nome] if q is None else f"{base[nome]} (q = {q})" for nome, q in com_q.items()}
+
+
+def nomes_dos_regressores(fabricas: dict[str, Callable[[], ProbRegressor]]) -> dict[str, str]:
+    return {REGRESSAO_LINEAR: "Regressão linear bayesiana", "svgp": f"SVGP (M = {fabricas['svgp']().n_indutores})"}
+
+
+IMPUTADORES = fabricas_de_imputadores(ler_configuracao())
+NOMES_DOS_IMPUTADORES = nomes_dos_imputadores(IMPUTADORES)
+REGRESSORES = fabricas_de_regressores(ler_configuracao())
+NOMES_DOS_REGRESSORES = nomes_dos_regressores(REGRESSORES)
 REFERENCIA_TAXA_ZERO = "referencia_taxa_0"
 SEM_IMPUTADOR = "nenhum"
 FLUXO_VALIDACAO = 0
@@ -105,15 +131,26 @@ class Ajustado:
     dobras: list[Imputer]
 
 
-def treino_e_validacao() -> tuple[Conjunto, Conjunto, np.ndarray, np.ndarray, np.ndarray]:
+def treino_e_medida(conjunto: str = VALIDACAO) -> tuple[Conjunto, Conjunto, np.ndarray, np.ndarray, np.ndarray]:
+    """Treino (para todo ajuste) e o conjunto em que se mede; o teste só entra quando é pedido."""
     refeicoes = carregar_refeicoes()
     mascaras = carregar_mascaras(refeicoes)
+    treino, validacao = separar(refeicoes)
+    medida = validacao if conjunto == VALIDACAO else np.flatnonzero(refeicoes.conjunto == TESTE)
     recortes = [
         Conjunto(refeicoes.G[i], refeicoes.P[i], refeicoes.C[i], refeicoes.y[i], refeicoes.person_id[i],
                  refeicoes.meal_id[i], mascaras.M[:, :, i])
-        for i in separar(refeicoes)
+        for i in (treino, medida)
     ]
     return *recortes, mascaras.taxas, mascaras.sementes, refeicoes.gavetas
+
+
+def treino_e_validacao() -> tuple[Conjunto, Conjunto, np.ndarray, np.ndarray, np.ndarray]:
+    return treino_e_medida(VALIDACAO)
+
+
+def pasta_de_saida(conjunto: str) -> Path:
+    return SAIDA if conjunto == VALIDACAO else SAIDA / "teste"
 
 
 def gerador(semente: int, indice_taxa: int, fluxo: int) -> np.random.Generator:
@@ -123,7 +160,16 @@ def gerador(semente: int, indice_taxa: int, fluxo: int) -> np.random.Generator:
 def _diagnostico(imputador) -> dict[str, float]:
     no_piso = getattr(imputador, "gavetas_no_piso_", None)
     return {"iteracoes": getattr(imputador, "n_iteracoes_", np.nan),
+            "teto_iteracoes": getattr(imputador, "max_iteracoes", np.nan),
             "gavetas_no_piso": np.nan if no_piso is None else len(no_piso)}
+
+
+def _iteracoes(completo: Imputer, das_dobras: list[Imputer]) -> str:
+    if not hasattr(completo, "n_iteracoes_"):
+        return ""
+    maior = max((i.n_iteracoes_ for i in das_dobras), default=None)
+    teto = f" de {completo.max_iteracoes}"
+    return f" | iterações: completo {completo.n_iteracoes_}{teto}" + ("" if maior is None else f", dobras até {maior}")
 
 
 def ajustar_imputadores(
@@ -144,9 +190,10 @@ def ajustar_imputadores(
             *({"imputador": nome, "etapa": f"dobra {f}", "segundos": np.nan, **_diagnostico(i)}
               for f, i in enumerate(das_dobras)),
             {"imputador": nome, "etapa": f"{N_DOBRAS} dobras", "segundos": fim - meio,
-             "iteracoes": np.nan, "gavetas_no_piso": np.nan},
+             "iteracoes": np.nan, "teto_iteracoes": np.nan, "gavetas_no_piso": np.nan},
         ]
-        print(f"  {nome}: completo {meio - inicio:.1f} s | {N_DOBRAS} dobras {fim - meio:.1f} s", flush=True)
+        print(f"  {nome}: completo {meio - inicio:.1f} s | {N_DOBRAS} dobras {fim - meio:.1f} s"
+              f"{_iteracoes(completo, das_dobras)}", flush=True)
     return ajustados, pd.DataFrame(tempos)
 
 
@@ -164,18 +211,18 @@ def ajustar_regressores(tr: Conjunto, nomes: list[str]) -> tuple[dict[str, ProbR
     return ajustados, pd.DataFrame(tempos)
 
 
-def celulas_da_validacao(imputador: Imputer, va: Conjunto, M: np.ndarray, rng: np.random.Generator) -> pd.DataFrame:
+def celulas_da_medida(imputador: Imputer, medida: Conjunto, M: np.ndarray, rng: np.random.Generator) -> pd.DataFrame:
     return pd.concat([
-        celulas_de_imputacao(va.G[b], np.log1p(G_s), M[b])
-        for b, G_s in amostras_em_gramas(imputador, va.G, va.P, M, va.C, S, rng)
+        celulas_de_imputacao(medida.G[b], np.log1p(G_s), M[b])
+        for b, G_s in amostras_em_gramas(imputador, medida.G, medida.P, M, medida.C, S, rng)
     ])
 
 
-def medir(tr: Conjunto, va: Conjunto, ajustados: dict[str, Ajustado], regressores: dict[str, ProbRegressor],
+def medir(tr: Conjunto, medida: Conjunto, ajustados: dict[str, Ajustado], regressores: dict[str, ProbRegressor],
           dobras, taxas, sementes, gavetas):
     metricas, ocultas, imputacao, por_gaveta = [], [], [], []
     com_parte_1 = REGRESSAO_LINEAR in regressores
-    Z_completo = montar_Z(va.G, va.P, va.C)
+    Z_completo = montar_Z(medida.G, medida.P, medida.C)
     diretas = {}
     for nome_regressor, regressor in regressores.items():
         media, var = regressor.predict(Z_completo)
@@ -184,11 +231,11 @@ def medir(tr: Conjunto, va: Conjunto, ajustados: dict[str, Ajustado], regressore
     for s, semente in enumerate(sementes):
         for t, taxa in enumerate(taxas):
             inicio = time.perf_counter()
-            M = va.M[s, t]
+            M = medida.M[s, t]
             n_ocultas = M.sum(axis=1)
             chave = {"taxa": taxa, "semente": int(semente)}
             for nome_regressor, (media, li, ls) in diretas.items():
-                ocultas.append(por_ocultas(va.y, media, li, ls, n_ocultas).assign(
+                ocultas.append(por_ocultas(medida.y, media, li, ls, n_ocultas).assign(
                     regressor=nome_regressor, **chave, imputador=SEM_IMPUTADOR, braco=REFERENCIA_TAXA_ZERO))
 
             for nome, ajustado in ajustados.items():
@@ -199,18 +246,18 @@ def medir(tr: Conjunto, va: Conjunto, ajustados: dict[str, Ajustado], regressore
                     recalibrado = RegressaoLinearBayesiana().fit(montar_Z(G_treino_imputado, tr.P, tr.C), tr.y)
 
                 for nome_regressor, regressor in regressores.items():
-                    bracos = prever_bracos(ajustado.completo, regressor, va.G, va.P, M, va.C, S,
+                    bracos = prever_bracos(ajustado.completo, regressor, medida.G, medida.P, M, medida.C, S,
                                            gerador(semente, t, FLUXO_VALIDACAO),
                                            recalibrado if nome_regressor == REGRESSAO_LINEAR else None)
                     for braco, (medias, variancias) in bracos.items():
                         metricas.append({"regressor": nome_regressor, **chave, "braco": braco, "imputador": nome, "S": S,
-                                         **avaliar_mistura(va.y, medias, variancias)})
+                                         **avaliar_mistura(medida.y, medias, variancias)})
                         li, ls = intervalo(medias, variancias)
-                        ocultas.append(por_ocultas(va.y, medias.mean(axis=0), li, ls, n_ocultas)
+                        ocultas.append(por_ocultas(medida.y, medias.mean(axis=0), li, ls, n_ocultas)
                                        .assign(regressor=nome_regressor, **chave, imputador=nome, braco=braco))
 
                 if com_parte_1 and taxa > 0:
-                    celulas = celulas_da_validacao(ajustado.completo, va, M, gerador(semente, t, FLUXO_IMPUTACAO))
+                    celulas = celulas_da_medida(ajustado.completo, medida, M, gerador(semente, t, FLUXO_IMPUTACAO))
                     imputacao.append({"imputador": nome, **chave, **avaliar_imputacao(celulas)})
                     por_gaveta.append(imputacao_por_gaveta(celulas).assign(imputador=nome, **chave))
 
@@ -270,7 +317,7 @@ def _rotular(tabela: pd.DataFrame) -> pd.DataFrame:
     return rotulada
 
 
-def figura(resumo: pd.DataFrame, metrica: str, titulo: str, eixo_y: str, nominal: float | None = None,
+def figura(resumo: pd.DataFrame, metrica: str, titulo: str, eixo_y: str, conjunto: str, nominal: float | None = None,
            taxa_zero: pd.DataFrame | None = None):
     """Um painel por regressor e imputador; linhas horizontais no nominal e na taxa 0 do regressor da linha."""
     dados = _rotular(resumo).assign(
@@ -299,22 +346,50 @@ def figura(resumo: pd.DataFrame, metrica: str, titulo: str, eixo_y: str, nominal
         + TEMA
         + labs(title=titulo, subtitle=" · ".join(referencias),
                x="Taxa de quantidades ocultas", y=eixo_y, color="Braço",
-               caption="Validação; média ± desvio entre 3 sementes de máscara. Linhas: regressor; colunas: imputador.")
+               caption=f"{NOMES_DOS_CONJUNTOS[conjunto]}; média ± desvio entre 3 sementes de máscara. "
+                       "Linhas: regressor; colunas: imputador.")
     )
+
+
+def gravar(tabelas: dict[str, pd.DataFrame], saida: Path, conjunto: str) -> pd.DataFrame:
+    """CSVs, resumo e figuras, todos dentro de `saida`."""
+    for nome in TABELAS_DA_PROPAGACAO:
+        tabelas[nome] = _chaves_primeiro(tabelas[nome], ["regressor"])
+    resumo = resumir(tabelas["propagacao_metricas"])
+
+    figuras = saida / "figuras"
+    figuras.mkdir(parents=True, exist_ok=True)
+    for nome, tabela in tabelas.items():
+        tabela.to_csv(saida / f"{nome}.csv", index=False)
+    resumo.to_csv(saida / "propagacao_resumo.csv", index=False)
+
+    picp_taxa_zero = (resumo.query("taxa == 0 and braco == @PLUGIN").groupby("regressor", sort=False).picp_media.first()
+                      .rename("valor").reset_index())
+    n_regressores, n_imputadores = resumo.regressor.nunique(), resumo.imputador.nunique()
+    tamanho = {"width": 1 + 4 * n_imputadores, "height": 1 + 4.5 * n_regressores, "dpi": 200, "verbose": False,
+               "limitsize": False}
+    figura(resumo, "picp", "Cobertura do intervalo de 90%", "PICP", conjunto, nominal=0.9, taxa_zero=picp_taxa_zero
+           ).save(figuras / "propagacao_picp.png", **tamanho)
+    figura(resumo, "mpiw_g", "Largura do intervalo de 90%", "MPIW (g)", conjunto
+           ).save(figuras / "propagacao_mpiw.png", **tamanho)
+    return resumo
 
 
 def main() -> None:
     argumentos = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    argumentos.add_argument("--conjunto", choices=list(NOMES_DOS_CONJUNTOS), default=VALIDACAO)
     argumentos.add_argument("--regressores", nargs="+", choices=list(REGRESSORES), default=list(REGRESSORES))
     argumentos.add_argument("--imputadores", nargs="+", choices=list(IMPUTADORES), default=list(IMPUTADORES))
     escolha = argumentos.parse_args()
     regressores_executados, imputadores_executados = escolha.regressores, escolha.imputadores
     parcial = set(regressores_executados) != set(REGRESSORES) or set(imputadores_executados) != set(IMPUTADORES)
     com_parte_1 = REGRESSAO_LINEAR in regressores_executados
+    saida = pasta_de_saida(escolha.conjunto)
 
     inicio = time.perf_counter()
-    tr, va, taxas, sementes, gavetas = treino_e_validacao()
-    print(f"treino: {len(tr.y):,} refeições | validação: {len(va.y):,} refeições | S = {S} | "
+    tr, medida, taxas, sementes, gavetas = treino_e_medida(escolha.conjunto)
+    print(f"treino: {len(tr.y):,} refeições | {NOMES_DOS_CONJUNTOS[escolha.conjunto].lower()}: {len(medida.y):,} refeições | "
+          f"S = {S} | saída: {saida.relative_to(RAIZ)} | "
           f"regressores: {', '.join(regressores_executados)} | imputadores: {', '.join(imputadores_executados)}", flush=True)
     dobras = dobras_por_pessoa(tr.pessoas, np.random.default_rng(0))
 
@@ -323,34 +398,16 @@ def main() -> None:
     print("ajuste dos imputadores:", flush=True)
     ajustados, tempos_imputadores = ajustar_imputadores(tr, dobras, imputadores_executados, com_dobras=com_parte_1)
     print("curva por taxa:", flush=True)
-    tabelas = medir(tr, va, ajustados, regressores, dobras, taxas, sementes, gavetas)
+    tabelas = medir(tr, medida, ajustados, regressores, dobras, taxas, sementes, gavetas)
     tabelas["regressores_ajuste"] = tempos_regressores
     if com_parte_1:
         tabelas["imputadores_ajuste"] = tempos_imputadores
     if parcial:
         chaves = {nome: ("imputador", imputadores_executados) if nome in TABELAS_DA_PARTE_1
                   else ("regressor", regressores_executados) for nome in tabelas}
-        tabelas = {nome: juntar(tabela, SAIDA / f"{nome}.csv", chaves[nome][0], chaves[nome][1], imputadores_executados)
+        tabelas = {nome: juntar(tabela, saida / f"{nome}.csv", chaves[nome][0], chaves[nome][1], imputadores_executados)
                    for nome, tabela in tabelas.items()}
-    for nome in TABELAS_DA_PROPAGACAO:
-        tabelas[nome] = _chaves_primeiro(tabelas[nome], ["regressor"])
-    resumo = resumir(tabelas["propagacao_metricas"])
-
-    figuras = SAIDA / "figuras"
-    figuras.mkdir(parents=True, exist_ok=True)
-    for nome, tabela in tabelas.items():
-        tabela.to_csv(SAIDA / f"{nome}.csv", index=False)
-    resumo.to_csv(SAIDA / "propagacao_resumo.csv", index=False)
-
-    picp_taxa_zero = (resumo.query("taxa == 0 and braco == @PLUGIN").groupby("regressor", sort=False).picp_media.first()
-                      .rename("valor").reset_index())
-    n_regressores, n_imputadores = resumo.regressor.nunique(), resumo.imputador.nunique()
-    tamanho = {"width": 1 + 4 * n_imputadores, "height": 1 + 4.5 * n_regressores, "dpi": 200, "verbose": False,
-               "limitsize": False}
-    figura(resumo, "picp", "Cobertura do intervalo de 90%", "PICP", nominal=0.9, taxa_zero=picp_taxa_zero
-           ).save(figuras / "propagacao_picp.png", **tamanho)
-    figura(resumo, "mpiw_g", "Largura do intervalo de 90%", "MPIW (g)"
-           ).save(figuras / "propagacao_mpiw.png", **tamanho)
+    resumo = gravar(tabelas, saida, escolha.conjunto)
 
     pd.set_option("display.width", 220)
     colunas = ["regressor", "imputador", "taxa", "braco"] + [f"{m}_media" for m in ("mae_g", "nll", "crps_g", "picp", "mpiw_g", "pct_meia_dose")]

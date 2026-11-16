@@ -51,7 +51,7 @@ O arquivo é lido uma vez, e as fábricas dos imputadores e dos regressores são
 
 **Decisão de Felipe:** para cada PPCA, compara-se a NLL média das 3 sementes, no braço de propagação com a regressão linear, contra as linhas de q = 5 já gravadas (`results/propagacao_metricas.csv` do `HEAD` antes da execução), nas taxas 0,25 a 1. Se ela piorar mais de 0,015 em alguma taxa, o q volta a 5. A taxa 0 fica de fora, porque nela os braços não dependem do imputador.
 
-**Como a regra se aplica ao par (sugestão do Claude, a confirmar):** o q é escolhido pelo PPCA condicional, e o PPCA sem média condicional herda esse q, para a comparação entre os dois mudar uma coisa só. Por isso, a regra decide pelo PPCA condicional e vale para os dois. A piora do PPCA sem média condicional é reportada, mas não troca o q sozinha.
+**Como a regra se aplica ao par (decisão de Felipe, fixada antes da curva):** o q é escolhido pelo PPCA condicional, e o PPCA sem média condicional herda esse q, para a comparação entre os dois mudar uma coisa só. Por isso, a regra decide pelo PPCA condicional e vale para os dois. A piora do PPCA sem média condicional é reportada, mas não troca o q sozinha.
 
 **Se o q voltar a 5:** `configs/hiperparametros.json` passa a ter q = 5 nos dois PPCA, e as linhas deles nos CSVs da validação voltam às do `HEAD`, sem reexecução. Essas linhas foram medidas com q = 5 e, no SVGP, com M = 256. A troca fica declarada no design e no `AGENTS.md`.
 

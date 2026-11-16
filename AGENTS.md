@@ -76,6 +76,7 @@ Violações destas regras invalidam o experimento. Sinalize imediatamente qualqu
 - **Ajuste no treino completo:** o imputador e o regressor de referência são ajustados uma vez com as gramas completas do treino; as máscaras definem o que fica oculto na validação e no teste. A máscara do treino só serve ao braço plug-in recalibrado (§6), com imputação por ajuste cruzado por pessoa em 5 dobras. Motivo: na taxa 1, o treino mascarado não teria quantidade observada para o imputador aprender. Detalhes em `docs/mascaramento.md`.
 - **Mecanismo:** aleatório (MCAR), declarado como limitação. O mascaramento é por gaveta (esconde todos os itens dela de uma vez), também declarado.
 - **Repetições:** 3 sementes por taxa; reportar média e desvio.
+- **Conjunto de medida:** a validação, para todas as escolhas, em `results/`; o teste só numa rodada única, com modelos e hiperparâmetros congelados (`--conjunto teste`), em `results/teste/`. O ajuste é sempre só no treino.
 - **Split:** treino / validação / teste = 70/15/15 por `person_id`, semente 0 (`src/amaprob/data/splits.py`).
 - **Escala:** os imputadores da otimização bayesiana são ajustados numa amostra de 25% do treino, estratificada pela ocasião. O SVGP roda no treino e na validação inteiros (ajuste de ~4 min com M = 256, previsão de ~36 s por rodada da curva). Treino em CPU.
 
@@ -137,7 +138,7 @@ class ProbRegressor(Protocol):
 
 A média linear faz do SVGP uma "regressão linear + correção não linear", e a comparação com a regressão linear bayesiana responde se a não linearidade ajuda. Com 10 épocas, a ELBO ainda subia e o ruído ficava no dobro do da regressão linear; com 60, ela assenta.
 
-**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`), com o regressor (regressão linear bayesiana e SVGP) e o imputador (porção média, PPCA e FA, cada um com e sem média condicional) como dimensões, com as mesmas máscaras e geradores (`--regressores` e `--imputadores` rodam só alguns pares e juntam as linhas deles aos CSVs existentes), e S = 100 amostras fixo (comparação com S = 500 em `results/propagacao_S.csv`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
+**Experimento central** (`src/amaprob/regression/propagation.py`, `src/amaprob/experiments/propagacao.py`), com o regressor (regressão linear bayesiana e SVGP) e o imputador (porção média, PPCA e FA, cada um com e sem média condicional) como dimensões, com os hiperparâmetros de `configs/hiperparametros.json` (§7), as mesmas máscaras e geradores (`--regressores` e `--imputadores` rodam só alguns pares e juntam as linhas deles aos CSVs existentes do mesmo conjunto; `--conjunto teste` mede no teste e grava em `results/teste/`), e S = 100 amostras fixo (comparação com S = 500 em `results/propagacao_S.csv`). Os três braços usam as mesmas S amostras de `Imputer.sample`, convertidas para gramas por `expm1`:
 - **Plug-in:** preenche cada quantidade oculta com a média das amostras **em gramas** e prevê uma vez. A média do log convertida (`expm1` da média) subestimaria as gramas, e o plug-in perderia por viés de conversão, não pela incerteza.
 - **Plug-in recalibrado (margem fixa):** a mesma entrada, num regressor ajustado com o treino mascarado e imputado da mesma forma (ver §4). A variância de ruído absorve o erro de imputação como folga igual para toda refeição. Só com a regressão linear bayesiana. Os imputadores das 5 dobras são ajustados uma vez por imputador: sem máscara, o ajuste não depende da taxa nem da semente.
 - **Propagação:** prevê para cada amostra e combina as preditivas na mistura `(1/S) Σ N(μ_s, σ²_s)`.
@@ -187,7 +188,9 @@ def objective(params: dict) -> float:
 | Porção média condicional | α = 178 | NLL −0,0002; CRPS −0,006 g | α = 1 |
 | SVGP (taxa 0) | M = 288 (o melhor, M = 512, fica na borda) | NLL −0,004 em relação a M = 256 | **M = 288** |
 
-O α quase não importa: α × 4 dá a mesma NLL até a 3ª casa nos três condicionais, inclusive acima do teto da grade da FA (α = 4000), e o limite α → ∞ é a versão sem média condicional, pior. O PPCA sem média condicional herda q = 12, sem ajuste medido com esse q (com q = 5, algumas dobras já paravam no limite de 500 iterações): a convergência é conferida antes da rodada no teste. `experiments/propagacao.py` roda a configuração de partida (q = 5, α = 1, M = 256) até a change da rodada no teste ler `configs/hiperparametros.json`. Otimização bayesiana e busca aleatória se alternam: a bayesiana acha o melhor na FA, no controle e no SVGP, e a aleatória no PPCA; com 12 avaliações e objetivo ruidoso, nenhuma domina.
+O α quase não importa: α × 4 dá a mesma NLL até a 3ª casa nos três condicionais, inclusive acima do teto da grade da FA (α = 4000), e o limite α → ∞ é a versão sem média condicional, pior. O PPCA sem média condicional herda q = 12. `experiments/propagacao.py` lê a configuração adotada de `configs/hiperparametros.json`.
+
+**Curva de validação com a configuração adotada.** Como a escolha usou só a taxa 0,5, os dois PPCA com q = 12 são medidos em todas as taxas da validação, com os dois regressores (o SVGP com M = 288), antes da rodada no teste. Regra fixada antes da curva: o q dos dois PPCA volta a 5 se, em alguma taxa de 0,25 a 1, a NLL média das 3 sementes do PPCA condicional (propagação com a regressão linear) ficar pior que a de q = 5 por mais de 0,015; o PPCA sem média condicional segue o q do condicional, e a variação dele é só reportada. Um ajuste que pare no teto de 500 iterações do EM tem o teto como ponto de parada declarado. Nos CSVs da validação, as linhas do SVGP com os outros imputadores continuam medidas com M = 256. Otimização bayesiana e busca aleatória se alternam: a bayesiana acha o melhor na FA, no controle e no SVGP, e a aleatória no PPCA; com 12 avaliações e objetivo ruidoso, nenhuma domina.
 
 ---
 
@@ -213,7 +216,7 @@ amaprob-projeto/
 │   ├── evaluation/          # métricas e calibração
 │   └── experiments/         # scripts de execução (gravam em results/)
 ├── notebooks/               # só orquestração e figuras
-├── results/                 # métricas em CSV + figuras
+├── results/                 # métricas em CSV + figuras (validação); teste/ só com a rodada no teste
 └── tests/                   # máscaras, splits, métricas, contratos
 ```
 

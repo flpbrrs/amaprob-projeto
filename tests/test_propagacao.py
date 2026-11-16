@@ -163,3 +163,80 @@ def test_plugin_usa_media_em_gramas():
     media_em_gramas = np.expm1(amostras_log[:, 0, 0]).mean()
     assert bracos[PLUGIN][0][0, 0] == pytest.approx(media_em_gramas)
     assert bracos[PLUGIN][0][0, 0] > np.expm1(amostras_log[:, 0, 0].mean())
+
+
+def test_configuracao_lida_do_arquivo(tmp_path):
+    from amaprob.experiments.propagacao import (
+        fabricas_de_imputadores, fabricas_de_regressores, ler_configuracao, nomes_dos_imputadores,
+        nomes_dos_regressores,
+    )
+
+    arquivo = tmp_path / "hiperparametros.json"
+    arquivo.write_text('{"ppca_condicional": {"q": 12, "alfa": 17.8}, "ppca": {"q": 12}, "svgp": {"n_indutores": 288}}',
+                       encoding="utf-8")
+    configuracao = ler_configuracao(arquivo)
+    imputadores, regressores = fabricas_de_imputadores(configuracao), fabricas_de_regressores(configuracao)
+
+    condicional = imputadores["ppca_condicional"]()
+    assert (condicional.q, condicional.alfa, condicional.media_condicional) == (12, 17.8, True)
+    assert imputadores["ppca"]().q == 12
+    assert imputadores["fa"]().q == 5
+    assert not imputadores["porcao_media"]().media_condicional
+    assert regressores["svgp"]().n_indutores == 288
+    assert nomes_dos_imputadores(imputadores)["ppca_condicional"] == "PPCA cond. (q = 12)"
+    assert nomes_dos_imputadores(imputadores)["porcao_media"] == "Porção média"
+    assert nomes_dos_regressores(regressores)["svgp"] == "SVGP (M = 288)"
+    assert ler_configuracao(tmp_path / "ausente.json") == {}
+
+
+@pytest.mark.skipif(not (ARQUIVO_REFEICOES.exists() and ARQUIVO_MASCARAS.exists()), reason="dados processados ausentes")
+def test_conjuntos_usados_no_teste():
+    from amaprob.data.splits import TREINO, VALIDACAO
+    from amaprob.experiments.propagacao import treino_e_medida
+
+    tr, medida, *_ = treino_e_medida(TESTE)
+    refeicoes = carregar_refeicoes()
+    conjunto_de = dict(zip(refeicoes.meal_id, refeicoes.conjunto))
+    assert {conjunto_de[i] for i in tr.meal_id} == {TREINO}
+    assert {conjunto_de[i] for i in medida.meal_id} == {TESTE}
+    assert not np.isin(np.concatenate([tr.meal_id, medida.meal_id]),
+                       refeicoes.meal_id[refeicoes.conjunto == VALIDACAO]).any()
+
+
+def _tabelas_minimas():
+    import pandas as pd
+
+    linhas = [{"regressor": "blr", "taxa": taxa, "semente": semente, "braco": braco, "imputador": "porcao_media",
+               "S": S, "picp": 0.9, "mpiw_g": 40.0 + semente}
+              for taxa in (0.0, 0.5) for semente in (0, 1) for braco in (PLUGIN, PROPAGACAO)]
+    return {"propagacao_metricas": pd.DataFrame(linhas),
+            "propagacao_por_ocultas": pd.DataFrame({"regressor": ["blr"], "imputador": ["porcao_media"]})}
+
+
+def test_gravacao_restrita_a_pasta_do_conjunto(tmp_path):
+    from amaprob.experiments.propagacao import gravar, juntar
+
+    validacao = tmp_path / "propagacao_metricas.csv"
+    validacao.write_text("conteudo da validacao", encoding="utf-8")
+    teste = tmp_path / "teste"
+    teste.mkdir()
+    gravar(_tabelas_minimas(), teste, TESTE)
+
+    novas = _tabelas_minimas()["propagacao_metricas"].assign(imputador="fa")
+    juntada = juntar(novas, teste / "propagacao_metricas.csv", "regressor", ["blr"], ["fa"])
+    assert set(juntada.imputador) == {"porcao_media", "fa"}
+    assert validacao.read_text(encoding="utf-8") == "conteudo da validacao"
+    fora = [c for c in tmp_path.rglob("*") if c.is_file() and teste not in c.parents]
+    assert fora == [validacao]
+    assert (teste / "propagacao_resumo.csv").exists() and (teste / "figuras" / "propagacao_picp.png").exists()
+
+
+def test_iteracoes_no_teto_aparecem_no_registro(dados):
+    from amaprob.experiments.propagacao import _diagnostico
+    from amaprob.imputation.ppca import PPCA
+
+    G, P, _, C, _, _ = dados
+    sem_mascara = np.zeros_like(P)
+    ppca = PPCA(q=2, max_iteracoes=3).fit(ocultar(G, sem_mascara), P, sem_mascara, C)
+    registro = _diagnostico(ppca)
+    assert registro["iteracoes"] == registro["teto_iteracoes"] == 3

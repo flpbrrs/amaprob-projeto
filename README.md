@@ -59,7 +59,7 @@ uv run python -m amaprob.experiments.propagacao --imputadores fa  # só a FA, ju
 uv run python -m amaprob.experiments.propagacao --regressores svgp  # só o SVGP, com todos os imputadores
 ```
 
-Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação nas taxas 0 a 1 e nas 3 sementes de máscara, para cada par de regressor (regressão linear bayesiana e SVGP) e imputador (porção média, PPCA e FA, cada um com e sem média condicional). O plug-in recalibrado existe só com a regressão linear. Com `--regressores` e `--imputadores`, as linhas dos outros pares e as referências da taxa 0 já gravadas ficam como estão; as métricas da Parte 1 só são calculadas quando a regressão linear roda, porque não dependem do regressor. Grava em `results/`:
+Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação nas taxas 0 a 1 e nas 3 sementes de máscara, para cada par de regressor (regressão linear bayesiana e SVGP) e imputador (porção média, PPCA e FA, cada um com e sem média condicional), com os hiperparâmetros de `configs/hiperparametros.json`. O plug-in recalibrado existe só com a regressão linear. Com `--regressores` e `--imputadores`, as linhas dos outros pares e as referências da taxa 0 já gravadas ficam como estão; as métricas da Parte 1 só são calculadas quando a regressão linear roda, porque não dependem do regressor. Por padrão mede na validação e grava em `results/`:
 
 | Arquivo | Conteúdo |
 |---|---|
@@ -69,8 +69,16 @@ Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação 
 | `regressores_ajuste.csv` | tempo, épocas e ELBO final do ajuste de cada regressor no treino completo |
 | `propagacao_S.csv` | comparação de S = 100 e S = 500 amostras, com os tempos (registro; não é regravado) |
 | `imputacao_metricas.csv`, `imputacao_por_gaveta.csv` | Parte 1: erro e calibração da imputação nas células ocultas, por imputador, taxa e semente |
-| `imputadores_ajuste.csv` | tempo, iterações e gavetas no piso de ruído (FA) do ajuste de cada imputador |
+| `imputadores_ajuste.csv` | tempo, iterações (com o teto do EM) e gavetas no piso de ruído (FA) do ajuste de cada imputador |
 | `figuras/propagacao_picp.png`, `figuras/propagacao_mpiw.png` | cobertura e largura do intervalo de 90% pela taxa, um painel por regressor e imputador |
+
+**Rodada no teste.** Com `--conjunto teste`, o ajuste continua só no treino e a medida passa para o teste; os mesmos arquivos são gravados em `results/teste/` (e `results/teste/figuras/`), e nada fora dessa pasta muda. A rodada é única (Regra 6) e roda em três chamadas, juntadas na pasta do teste, para que uma falha custe só uma parte:
+
+```bash
+uv run python -m amaprob.experiments.propagacao --conjunto teste --imputadores porcao_media porcao_condicional fa fa_condicional
+uv run python -m amaprob.experiments.propagacao --conjunto teste --imputadores ppca
+uv run python -m amaprob.experiments.propagacao --conjunto teste --imputadores ppca_condicional
+```
 
 Cada rodada da curva leva cerca de 80 s por imputador e por regressor. Os ajustes no treino completo e nas 5 dobras levam cerca de 16 min com o PPCA, 5 min com a FA e 9 min com o PPCA e com a FA condicionais; o do SVGP, cerca de 4 min. Tempos de parede: cerca de 1 h 30 com a regressão linear e os três imputadores sem média condicional, 27 min com `--imputadores fa`, 30 min com `--regressores blr --imputadores ppca_condicional` e 68 min com o SVGP e três imputadores; a execução completa, com os dois regressores e os seis imputadores, deve levar cerca de 4 h 45 (estimativa).
 
