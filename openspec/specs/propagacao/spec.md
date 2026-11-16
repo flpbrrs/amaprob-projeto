@@ -56,7 +56,7 @@ Na taxa 0, os três braços SHALL coincidir com a previsão direta do regressor 
 - **THEN** média e variância dos três braços coincidem com as do regressor de referência em toda refeição da validação, até o erro de ponto flutuante
 
 ### Requirement: Curva por taxa e braço
-O experimento SHALL rodar as taxas 0; 0,25; 0,5; 0,75 e 1 com as 3 sementes de máscara, para cada par de regressor (regressão linear bayesiana e SVGP) e imputador (porção média, PPCA e FA), ajustar no treino e medir na validação. O braço plug-in recalibrado SHALL existir só com a regressão linear bayesiana. Ele MUST NOT ler as refeições de teste (Regra 6). SHALL gravar as métricas por regressor, imputador, taxa, semente e braço, a leitura por número de quantidades ocultas, o resumo com média e desvio entre as sementes e as figuras de PICP e MPIW pela taxa, com um painel por regressor e imputador.
+O experimento SHALL rodar as taxas 0; 0,25; 0,5; 0,75 e 1 com as 3 sementes de máscara, para cada par de regressor (regressão linear bayesiana e SVGP) e imputador (porção média, PPCA, FA e as versões dos três com média condicional), ajustar no treino e medir na validação. O braço plug-in recalibrado SHALL existir só com a regressão linear bayesiana. Ele MUST NOT ler as refeições de teste (Regra 6). SHALL gravar as métricas por regressor, imputador, taxa, semente e braço, a leitura por número de quantidades ocultas, o resumo com média e desvio entre as sementes e as figuras de PICP e MPIW pela taxa, com um painel por regressor e imputador.
 
 #### Scenario: Conjuntos usados
 - **WHEN** o experimento roda

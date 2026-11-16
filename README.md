@@ -56,10 +56,10 @@ Ajusta a regressão linear bayesiana no treino, mede na validação e grava em `
 ```bash
 uv run python -m amaprob.experiments.propagacao                   # plug-in × propagação por taxa, regressor e imputador
 uv run python -m amaprob.experiments.propagacao --imputadores fa  # só a FA, juntando aos CSVs existentes
-uv run python -m amaprob.experiments.propagacao --regressores svgp  # só o SVGP, com os três imputadores
+uv run python -m amaprob.experiments.propagacao --regressores svgp  # só o SVGP, com todos os imputadores
 ```
 
-Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação nas taxas 0 a 1 e nas 3 sementes de máscara, para cada par de regressor (regressão linear bayesiana e SVGP) e imputador (porção média, PPCA e FA). O plug-in recalibrado existe só com a regressão linear. Com `--regressores` e `--imputadores`, as linhas dos outros pares e as referências da taxa 0 já gravadas ficam como estão; as métricas da Parte 1 só são calculadas quando a regressão linear roda, porque não dependem do regressor. Grava em `results/`:
+Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação nas taxas 0 a 1 e nas 3 sementes de máscara, para cada par de regressor (regressão linear bayesiana e SVGP) e imputador (porção média, PPCA e FA, cada um com e sem média condicional). O plug-in recalibrado existe só com a regressão linear. Com `--regressores` e `--imputadores`, as linhas dos outros pares e as referências da taxa 0 já gravadas ficam como estão; as métricas da Parte 1 só são calculadas quando a regressão linear roda, porque não dependem do regressor. Grava em `results/`:
 
 | Arquivo | Conteúdo |
 |---|---|
@@ -72,7 +72,7 @@ Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação 
 | `imputadores_ajuste.csv` | tempo, iterações e gavetas no piso de ruído (FA) do ajuste de cada imputador |
 | `figuras/propagacao_picp.png`, `figuras/propagacao_mpiw.png` | cobertura e largura do intervalo de 90% pela taxa, um painel por regressor e imputador |
 
-Cada rodada da curva leva cerca de 80 s por imputador e por regressor. Os ajustes no treino completo e nas 5 dobras levam cerca de 16 min com o PPCA e 5 min com a FA; o do SVGP, cerca de 4 min. Tempos de parede: cerca de 1 h 30 só com a regressão linear, 27 min com `--imputadores fa` e 68 min com `--regressores svgp`; a execução completa, com os dois regressores, deve levar cerca de 2 h 30 (estimativa).
+Cada rodada da curva leva cerca de 80 s por imputador e por regressor. Os ajustes no treino completo e nas 5 dobras levam cerca de 16 min com o PPCA, 5 min com a FA e 9 min com o PPCA e com a FA condicionais; o do SVGP, cerca de 4 min. Tempos de parede: cerca de 1 h 30 com a regressão linear e os três imputadores sem média condicional, 27 min com `--imputadores fa`, 30 min com `--regressores blr --imputadores ppca_condicional` e 68 min com o SVGP e três imputadores; a execução completa, com os dois regressores e os seis imputadores, deve levar cerca de 4 h 45 (estimativa).
 
 ## Testes
 

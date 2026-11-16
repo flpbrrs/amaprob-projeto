@@ -27,15 +27,13 @@ Alternativas adiadas:
 
 **Quando voltar:** se a curva plug-in × propagação ficar ambígua por causa da referência da taxa 0, ou se o SVGP mostrar cobertura por faixa muito diferente da regressão linear bayesiana.
 
-## Média de cada gaveta dependendo da presença e do contexto (PPCA/FA "B+")
+## Força do ridge na média condicional
 
-No PPCA e na FA, a média de cada gaveta (μ_k) é única: o tamanho esperado da porção não muda com as outras gavetas presentes (`P`) nem com o contexto (`C`). Com quantidades observadas, a correlação entre gavetas compensa em parte. Na taxa 1, sem nenhuma quantidade observada, a posterior do latente é a priori, e a média imputada fica perto da do baseline.
+A média condicional (porção média, PPCA e FA) usa α = 1 fixo nos coeficientes padronizados de `P` e `C`: uma priori N(0, 1) no efeito de um desvio de cada coluna sobre `log1p(gramas)`. O valor não foi otimizado.
 
-Alternativa adiada: μ_k como função linear de `P` e `C`, com o passo M virando uma regressão por gaveta (a mesma estrutura do passo M atual, com mais colunas em z̃).
+**Por que ficou de fora:** com ~213 mil refeições, a priori só pesa nas direções sem apoio nos dados (colunas colineares e gavetas que quase não aparecem juntas); a média das gavetas problemáticas já bate com a observada.
 
-**Por que ficou de fora:** o escopo mínimo pede PPCA e FA; a extensão muda o modelo sem ser exigida.
-
-**Quando voltar:** se o intervalo da propagação na taxa 1 continuar largo com o PPCA e a FA, e houver tempo antes da entrega.
+**Quando voltar:** se a cauda das gramas imputadas crescer ou se a otimização bayesiana tiver orçamento sobrando; α pode entrar como mais um botão.
 
 ## Regra do IBGE para os gramas de açúcar adicionado
 
