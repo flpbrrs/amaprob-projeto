@@ -1,0 +1,22 @@
+{
+  "ppca_condicional": {
+    "q": 12,
+    "alfa": 17.78279410038923
+  },
+  "fa_condicional": {
+    "q": 5,
+    "alfa": 1.0
+  },
+  "porcao_condicional": {
+    "alfa": 1.0
+  },
+  "svgp": {
+    "n_indutores": 288
+  },
+  "ppca": {
+    "q": 12
+  },
+  "fa": {
+    "q": 5
+  }
+}

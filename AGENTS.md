@@ -77,7 +77,7 @@ Violações destas regras invalidam o experimento. Sinalize imediatamente qualqu
 - **Mecanismo:** aleatório (MCAR), declarado como limitação. O mascaramento é por gaveta (esconde todos os itens dela de uma vez), também declarado.
 - **Repetições:** 3 sementes por taxa; reportar média e desvio.
 - **Split:** treino / validação / teste = 70/15/15 por `person_id`, semente 0 (`src/amaprob/data/splits.py`).
-- **Escala:** amostra estratificada de refeições para os laços pesados (otimização bayesiana). O SVGP roda no treino e na validação inteiros (ajuste de ~4 min, previsão de ~36 s por rodada da curva). Treino em CPU.
+- **Escala:** os imputadores da otimização bayesiana são ajustados numa amostra de 25% do treino, estratificada pela ocasião. O SVGP roda no treino e na validação inteiros (ajuste de ~4 min com M = 256, previsão de ~36 s por rodada da curva). Treino em CPU.
 
 ---
 
@@ -133,7 +133,7 @@ class ProbRegressor(Protocol):
 | Modelo | Escopo | Implementação |
 |---|---|---|
 | Regressão linear bayesiana | Obrigatório | Forma fechada conjugada em NumPy (`regression/blr.py`) |
-| Processo Gaussiano Variacional Esparso (SVGP) | Obrigatório | GPyTorch (`regression/svgp.py`): média linear + kernel RBF com um comprimento por coluna, sobre entradas padronizadas; M = 256 pontos indutores aprendidos, 60 épocas de minibatch na ELBO, `float64` |
+| Processo Gaussiano Variacional Esparso (SVGP) | Obrigatório | GPyTorch (`regression/svgp.py`): média linear + kernel RBF com um comprimento por coluna, sobre entradas padronizadas; M pontos indutores aprendidos (256 de partida; 288 adotado na Parte 3, §7), 60 épocas de minibatch na ELBO, `float64` |
 
 A média linear faz do SVGP uma "regressão linear + correção não linear", e a comparação com a regressão linear bayesiana responde se a não linearidade ajuda. Com 10 épocas, a ELBO ainda subia e o ruído ficava no dobro do da regressão linear; com 60, ela assenta.
 
@@ -154,7 +154,15 @@ Hipótese: a propagação produz intervalos calibrados; o plug-in subestima a in
 
 ## 7. Parte 3 — Otimização bayesiana
 
-**Alvos:** dimensão latente do PPCA/FA; número de pontos indutores do SVGP.
+**Alvos** (`src/amaprob/experiments/otimizacao.py`), numa grade discreta de candidatos:
+
+| Modelo | Botões | Objetivo (NLL do carboidrato na validação) |
+|---|---|---|
+| PPCA e FA com média condicional | q ∈ {1, …, 15} e α (21 valores logarítmicos de 10⁻² a 10³) | Braço de propagação com a regressão linear, taxa 0,5, semente 0; ajuste em 25% do treino |
+| Porção média condicional (controle) | α | Idem; buscado para a comparação com a FA condicional continuar justa |
+| SVGP | M ∈ {32, 48, …, 512} | Taxa 0 (gramas completas); ajuste no treino completo |
+
+As versões sem média condicional herdam o q da condicional, para a comparação com e sem média condicional mudar uma coisa só. A porção média não tem botão, e a regressão linear ajusta α e β do prior pela evidência, em forma fechada: a otimização bayesiana serve aos botões que mudam a estrutura do modelo e custam um ajuste inteiro por tentativa.
 
 **Contrato:**
 
@@ -163,9 +171,23 @@ def objective(params: dict) -> float:
     """Treina no treino, retorna a NLL na validação. Determinística dada a semente."""
 ```
 
-- **Método:** surrogate de Processo Gaussiano (BoTorch, ou `gp_minimize` do scikit-optimize).
-- **Extra:** busca aleatória com o mesmo orçamento de avaliações, para comparação.
-- **Registro:** salvar todas as avaliações (parâmetros, NLL, tempo) para gerar a curva "melhor NLL × número de avaliações".
+- **Método** (`src/amaprob/tuning/busca.py`): BoTorch, com surrogate de processo gaussiano ajustado às avaliações e Expected Improvement em log calculado em todos os candidatos não avaliados.
+- **Comparação:** busca aleatória com o mesmo orçamento (12 avaliações por modelo); as 4 primeiras são comuns aos dois métodos, e um candidato repetido não é recalculado.
+- **α na amostra:** usado direto, sem conversão pelo número de refeições. α é a precisão de um prior, e o ótimo dela não depende de N; a confirmação mede a variante convertida como diagnóstico.
+- **Escolha:** menor NLL; no SVGP, o menor M a até 0,01 da menor NLL, porque a NLL tende a cair sempre um pouco com M e o custo cresce com ele.
+- **Confirmação e adoção:** a escolhida e a de partida reajustadas no treino completo, nas 3 sementes da taxa 0,5 (o SVGP já é buscado no treino completo). Um imputador só adota a escolhida se ela melhorar a NLL nas duas sementes que não entraram na escolha e a média delas em pelo menos 0,015, a oscilação da comparação entre máscaras; senão, fica a de partida.
+- **Registro:** todas as avaliações (parâmetros, métricas, tempo, melhor NLL até ali), a confirmação, a curva "melhor NLL × número de avaliações" e a configuração adotada em `configs/hiperparametros.json`, lida pela rodada no teste.
+
+**Resultado** (validação): a configuração de partida está num platô, e os hiperparâmetros pesam pouco perto da estrutura (média condicional, propagação).
+
+| Modelo | Escolhida pela busca | Confirmação (sementes 1 e 2, não usadas na escolha) | Adotada |
+|---|---|---|---|
+| PPCA condicional | q = 12, α = 17,8 | NLL −0,030 e −0,012; CRPS −0,15 g nas 3 sementes; alcança a FA condicional | **q = 12, α = 17,8** |
+| FA condicional | q = 6, α = 1000 (teto da grade) | NLL +0,006 e +0,015: o ganho da semente 0 era ruído da máscara | q = 5, α = 1 |
+| Porção média condicional | α = 178 | NLL −0,0002; CRPS −0,006 g | α = 1 |
+| SVGP (taxa 0) | M = 288 (o melhor, M = 512, fica na borda) | NLL −0,004 em relação a M = 256 | **M = 288** |
+
+O α quase não importa: α × 4 dá a mesma NLL até a 3ª casa nos três condicionais, inclusive acima do teto da grade da FA (α = 4000), e o limite α → ∞ é a versão sem média condicional, pior. O PPCA sem média condicional herda q = 12, sem ajuste medido com esse q (com q = 5, algumas dobras já paravam no limite de 500 iterações): a convergência é conferida antes da rodada no teste. `experiments/propagacao.py` roda a configuração de partida (q = 5, α = 1, M = 256) até a change da rodada no teste ler `configs/hiperparametros.json`. Otimização bayesiana e busca aleatória se alternam: a bayesiana acha o melhor na FA, no controle e no SVGP, e a aleatória no PPCA; com 12 avaliações e objetivo ruidoso, nenhuma domina.
 
 ---
 
@@ -197,7 +219,7 @@ amaprob-projeto/
 
 Subpacotes são criados quando o código da etapa é escrito, não antes.
 
-**Ambiente:** `uv` com Python 3.12. Dependências entram sob demanda, discutidas antes (`uv add`). Stack prevista: NumPy, pandas, SciPy, scikit-learn, PyTorch, GPyTorch, BoTorch (ou scikit-optimize), PyMC/NumPyro + ArviZ, scoringrules, plotnine (figuras, com o tema comum de `evaluation/tema.py`), pytest. Para ler as planilhas do IBGE uma única vez: `uv run --with openpyxl`.
+**Ambiente:** `uv` com Python 3.12. Dependências entram sob demanda, discutidas antes (`uv add`). Stack prevista: NumPy, pandas, SciPy, scikit-learn, PyTorch, GPyTorch, BoTorch, PyMC/NumPyro + ArviZ, scoringrules, plotnine (figuras, com o tema comum de `evaluation/tema.py`), pytest. Para ler as planilhas do IBGE uma única vez: `uv run --with openpyxl`.
 
 ---
 
@@ -236,7 +258,7 @@ Subpacotes são criados quando o código da etapa é escrito, não antes.
 
 Depois do pipeline de ponta a ponta, as Partes 1 e 2 podem avançar em paralelo, porque os modelos dependem só dos contratos.
 
-Escopo: só o mínimo descrito nas seções 5 a 7. Os extras (VAE, busca aleatória e análises adicionais) ficam suspensos e só voltam à discussão se houver folga.
+Escopo: só o mínimo descrito nas seções 5 a 7. Os extras (VAE e análises adicionais) ficam suspensos e só voltam à discussão se houver folga; a busca aleatória entrou na Parte 3 como comparação.
 
 ---
 

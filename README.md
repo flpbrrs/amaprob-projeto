@@ -74,6 +74,22 @@ Compara plug-in, plug-in recalibrado e propagação da incerteza da imputação 
 
 Cada rodada da curva leva cerca de 80 s por imputador e por regressor. Os ajustes no treino completo e nas 5 dobras levam cerca de 16 min com o PPCA, 5 min com a FA e 9 min com o PPCA e com a FA condicionais; o do SVGP, cerca de 4 min. Tempos de parede: cerca de 1 h 30 com a regressão linear e os três imputadores sem média condicional, 27 min com `--imputadores fa`, 30 min com `--regressores blr --imputadores ppca_condicional` e 68 min com o SVGP e três imputadores; a execução completa, com os dois regressores e os seis imputadores, deve levar cerca de 4 h 45 (estimativa).
 
+```bash
+uv run python -m amaprob.experiments.otimizacao                        # Parte 3: os quatro modelos
+uv run python -m amaprob.experiments.otimizacao --modelos svgp         # só o SVGP, juntando aos arquivos existentes
+```
+
+Otimização bayesiana (BoTorch) e busca aleatória, com 12 avaliações cada, dos botões de PPCA e FA com média condicional (q e α), da porção média condicional (α) e do SVGP (M), só na validação. A escolha é confirmada no treino completo contra a configuração de partida. Grava em `results/` e `configs/`:
+
+| Arquivo | Conteúdo |
+|---|---|
+| `otimizacao_avaliacoes.csv` | uma linha por modelo, método e avaliação: hiperparâmetros, métricas, tempo, reaproveitada e melhor NLL até ali |
+| `otimizacao_confirmacao.csv` | configuração de partida e escolhida no treino completo, por modelo e semente |
+| `figuras/otimizacao_convergencia.png` | melhor NLL pelo número de avaliações, um painel por modelo |
+| `configs/hiperparametros.json` | configuração escolhida de cada modelo, com o q herdado pelo PPCA e pela FA sem média condicional |
+
+Os imputadores são avaliados num ajuste em 25% do treino mais a propagação na validação (de 1 a 6 min por avaliação, conforme o q); o SVGP, no treino completo (de 1,4 min com M = 32 a 12 min com M = 512). Tempos de parede: 3 h com os três imputadores e 1 h 40 com `--modelos svgp`; a execução completa leva cerca de 4 h 40. `--so-confirmacao` refaz só a variante de α convertido da confirmação (cerca de 25 min).
+
 ## Testes
 
 ```bash
