@@ -71,7 +71,18 @@ uv run python -m amaprob.experiments.propagacao --conjunto teste --imputadores p
 uv run python -m amaprob.experiments.propagacao --conjunto teste --imputadores ppca_condicional
 ```
 
-A primeira cria os arquivos de `results/teste/`, e as outras juntam a eles. Se uma falhar, só ela é refeita. O SVGP é reajustado em cada chamada (~5 min cada); com semente fixa, o ajuste dá o mesmo resultado, o que a junção já pressupõe (cenário "Mesmo resultado que a execução completa"). Estimativa: ~2 h 35, ~1 h 25 a ~2 h 30 e ~1 h 35, num total de ~5 h 35 a ~6 h 40, refeito depois da curva de validação com os tempos medidos.
+A primeira cria os arquivos de `results/teste/`, e as outras juntam a eles. Se uma falhar, só ela é refeita. O SVGP é reajustado em cada chamada (~4 min cada); com semente fixa, o ajuste dá o mesmo resultado, o que a junção já pressupõe (cenário "Mesmo resultado que a execução completa"). As três podem ser encadeadas com `;` numa linha só, cada uma com o próprio log, para uma falha não impedir as seguintes.
+
+**Estimativa com os tempos medidos na curva de validação** (o teste tem 45.791 refeições, 0,3% a mais que a validação):
+
+| Chamada | Ajustes | SVGP | Rodadas (15) | Total |
+|---|---|---|---|---|
+| Porção média, porção média cond., FA, FA cond. | ~14 min (medidos com q = 5) | ~4 min | 4 × 136 a 174 s por rodada: 2 h 16 a 2 h 54 | **~2 h 35 a ~3 h 15** |
+| PPCA (q = 12) | 52 min (medido) | ~4 min | 174 s por rodada: 44 min | **~1 h 40** |
+| PPCA cond. (q = 12) | 53 min (medido) | ~4 min | 174 s por rodada: 44 min | **~1 h 40** |
+| **Total** | | | | **~6 h 00 a ~6 h 40** |
+
+Os 174 s por imputador e rodada (dois regressores) são a média das 15 rodadas da curva dos PPCA com q = 12 (348 s para dois imputadores, de 320 s na taxa 0 a 365 s na taxa 1). Para os imputadores com q = 5, a faixa vai dos ~136 s medidos antes (80 s com a reta + 56 s com o SVGP) aos mesmos 174 s.
 
 ## Risks / Trade-offs
 
@@ -84,3 +95,24 @@ A primeira cria os arquivos de `results/teste/`, e as outras juntam a eles. Se u
 ## Migration Plan
 
 Sem migração: o padrão do `--conjunto` mantém o comportamento atual, com exceção dos valores dos botões, que agora vêm do arquivo. Para voltar atrás, basta o `git revert` dos commits da change e a restauração dos CSVs da validação do `HEAD` anterior.
+
+## Resultado da curva de validação (PPCA com q = 12)
+
+Execução de 195,7 min com `--imputadores ppca ppca_condicional` e os dois regressores: SVGP com M = 288 em 255 s; PPCA em 632 s no treino completo e 2.466 s nas 5 dobras; PPCA condicional em 632 s e 2.537 s; 348 s por rodada da curva. Só as linhas dos dois PPCA mudaram nos CSVs da validação (as dos outros imputadores conferidas idênticas às do `HEAD`, sem duplicatas).
+
+**Teto do EM:** pararam nas 500 iterações 5 dos 6 ajustes do PPCA (treino completo e 4 dobras; a outra em 481) e 4 dos 6 do PPCA condicional (treino completo e 3 dobras; as outras em 494 e 486). Com q = 5, o PPCA condicional convergia em ~214 iterações: com q = 12, a convergência fica mais lenta. Pela decisão 4, o teto é o ponto de parada declarado.
+
+**Regra (decisão 6):** NLL média das 3 sementes, propagação com a regressão linear, q = 12 menos q = 5.
+
+| Taxa | PPCA cond. NLL | PPCA cond. CRPS (g) | PPCA cond. PICP | PPCA cond. MPIW (g) | PPCA NLL (reportado) |
+|---|---|---|---|---|---|
+| 0,25 | −0,019 | −0,12 | +0,1 pp | −0,9 | −0,019 |
+| 0,50 | −0,023 | −0,16 | +0,1 pp | −1,4 | −0,028 |
+| 0,75 | −0,025 | −0,11 | +0,1 pp | −1,6 | −0,004 |
+| 1,00 | +0,008 | −0,02 | −0,05 pp | −1,7 | −0,009 |
+
+Maior piora do PPCA condicional: +0,008 na taxa 1, abaixo de 0,015. **Veredito: q = 12 fica nos dois PPCA.** Leitura: no PPCA condicional, a configuração adotada (q = 12, α = 17,8) melhora a NLL e o CRPS de 0,25 a 0,75 em relação à de partida (q = 5, α = 1) e estreita o intervalo em todas as taxas, com a cobertura mantida (93% a 94%); como mudaram q e α, o ganho é da configuração, não só do q (o α quase não importa, §7 do `AGENTS.md`). Na taxa 1 a diferença fica dentro do ruído, o que bate com a leitura da média condicional: sem quantidades observadas, os fatores latentes quase não têm o que transmitir. No PPCA sem média condicional, só o q mudou, e ele melhora em todas as taxas.
+
+**SVGP determinístico entre processos:** na validação, as linhas do SVGP com M = 256 vêm de duas execuções diferentes (porção média e FA de uma; porção média condicional e FA condicional de outra), e as métricas da taxa 0 são idênticas bit a bit entre elas. Reajustar o SVGP em cada uma das 3 chamadas do teste dá o mesmo modelo, e a referência da taxa 0 gravada pela primeira chamada vale para as outras.
+
+**Figuras da validação:** os rótulos saem da configuração lida ("SVGP (M = 288)"), mas nas colunas dos quatro imputadores que não mudaram as linhas do SVGP continuam medidas com M = 256, e a referência da taxa 0 do SVGP também. As figuras da validação são de trabalho; as do artigo saem do teste, onde todos usam M = 288. Por isso as da validação não ganham legenda à parte.

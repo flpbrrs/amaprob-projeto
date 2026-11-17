@@ -57,7 +57,7 @@ Na validação, o experimento SHALL gravar em `results/` e `results/figuras/`. N
 - **WHEN** o experimento termina no teste
 - **THEN** existem `results/teste/propagacao_metricas.csv`, `results/teste/propagacao_por_ocultas.csv`, `results/teste/propagacao_resumo.csv` e as figuras em `results/teste/figuras/`, e nenhum arquivo de `results/` fora de `results/teste/` mudou
 
-### Requirement: Configuração adotada na validação
+### Requirement: Hiperparâmetros adotados lidos do arquivo
 Os imputadores e os regressores SHALL ser construídos com os hiperparâmetros de `configs/hiperparametros.json` (q e α dos imputadores, M do SVGP), nos dois conjuntos. Um modelo sem entrada no arquivo SHALL usar o valor de partida. Os rótulos das figuras SHALL mostrar o valor usado por cada modelo.
 
 #### Scenario: Valores lidos do arquivo

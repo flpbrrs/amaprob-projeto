@@ -23,14 +23,14 @@
 ## 5. Curva de validação do PPCA com q = 12
 
 - [x] 5.1 Guardar as linhas de q = 5 do `HEAD` para a regra (`git show HEAD:results/propagacao_metricas.csv` para um arquivo temporário fora de `results/`) e verificar que ele tem as linhas de `ppca` e `ppca_condicional` com `blr`
-- [ ] 5.2 Rodar `uv run python -m amaprob.experiments.propagacao --imputadores ppca ppca_condicional` em segundo plano e acompanhar o log; ponto de parada: ajuste do PPCA no treino completo acima de 30 min interrompe a execução e volta para decisão. Verificar no fim que `results/imputadores_ajuste.csv` traz iterações e tempo dos dois PPCA com q = 12, e que as linhas dos outros imputadores nos CSVs da validação ficaram idênticas às do `HEAD`
-- [ ] 5.3 Aplicar a regra (design, decisão 6): NLL média das 3 sementes, propagação com a regressão linear, taxas 0,25 a 1, q = 12 contra q = 5; registrar a tabela de diferenças e o veredito. Se o q voltar a 5, restaurar as linhas dos dois PPCA a partir do `HEAD` e gravar q = 5 em `configs/hiperparametros.json`; verificar com `git diff` que só essas linhas mudaram
-- [ ] 5.4 Registrar no design e no `AGENTS.md` §7 o resultado da regra, as iterações (teto declarado, se for o caso) e a leitura da taxa 1; verificar que as figuras da validação foram regravadas com os rótulos novos
+- [x] 5.2 Rodar `uv run python -m amaprob.experiments.propagacao --imputadores ppca ppca_condicional` em segundo plano e acompanhar o log; ponto de parada: ajuste do PPCA no treino completo acima de 30 min interrompe a execução e volta para decisão. Verificar no fim que `results/imputadores_ajuste.csv` traz iterações e tempo dos dois PPCA com q = 12, e que as linhas dos outros imputadores nos CSVs da validação ficaram idênticas às do `HEAD`
+- [x] 5.3 Aplicar a regra (design, decisão 6): NLL média das 3 sementes, propagação com a regressão linear, taxas 0,25 a 1, q = 12 contra q = 5; registrar a tabela de diferenças e o veredito. Se o q voltar a 5, restaurar as linhas dos dois PPCA a partir do `HEAD` e gravar q = 5 em `configs/hiperparametros.json`; verificar com `git diff` que só essas linhas mudaram
+- [x] 5.4 Registrar no design e no `AGENTS.md` §7 o resultado da regra, as iterações (teto declarado, se for o caso) e a leitura da taxa 1; verificar que as figuras da validação foram regravadas com os rótulos novos
 
 ## 6. Pronto para o teste
 
 - [x] 6.1 Conferência do teste sem métricas (design, decisão 7): imprimir refeições, pessoas, pessoas em comum com treino e validação (zero), `M ⊆ P` e taxa efetiva por taxa e semente, sem ler `y` nem prever; verificar que nada é gravado em `results/teste/`
-- [ ] 6.2 Refazer a estimativa das 3 chamadas da rodada no teste com os tempos medidos em 5.2 (ajuste e tempo por rodada) e registrá-la no design
+- [x] 6.2 Refazer a estimativa das 3 chamadas da rodada no teste com os tempos medidos em 5.2 (ajuste e tempo por rodada) e registrá-la no design
 
 ## Workflow follow-up
 
