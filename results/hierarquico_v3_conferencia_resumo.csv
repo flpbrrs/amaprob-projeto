@@ -1,0 +1,9 @@
+cenario,taxa,imputador,menor_autovalor_media,menor_autovalor_desvio,media_log_max_diff_fa_media,media_log_max_diff_fa_desvio,cov_log_max_diff_fa_media,cov_log_max_diff_fa_desvio
+H1,0.25,fa_por_gaveta_v3,0.02562318095559094,0.002371334970678754,,,,
+H1,0.5,fa_por_gaveta_v3,0.02026068457674396,0.002272759863905273,,,,
+H1,0.75,fa_por_gaveta_v3,0.01964790849872019,0.0012115711770153551,,,,
+H1,1.0,fa_por_gaveta_v3,0.018934047813022596,0.0,,,,
+H2,0.25,fa_por_gaveta_v3,0.028793544598586393,0.00013064523769090947,,,,
+H2,0.5,fa_por_gaveta_v3,0.030376863921632243,0.002212172976029523,,,,
+H2,0.75,fa_por_gaveta_v3,0.03704708572955661,0.0035857200071618364,,,,
+H2,1.0,fa_por_gaveta_v3,0.0977468001483403,0.0,0.0,0.0,0.0,0.0
