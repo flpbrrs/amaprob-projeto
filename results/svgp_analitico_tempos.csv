@@ -1,0 +1,15 @@
+etapa,segundos
+ajuste do SVGP (M = 288),159.6006036250037
+ajuste de fa_condicional,86.49486841700855
+"plug-in e propagação, taxa 0.5, semente 0",12.140817374980543
+"analítica, taxa 0.5, semente 0",243.35423500000616
+"plug-in e propagação, taxa 0.5, semente 1",11.316541916981805
+"analítica, taxa 0.5, semente 1",239.38936337499763
+"plug-in e propagação, taxa 0.5, semente 2",11.178156499983743
+"analítica, taxa 0.5, semente 2",236.623197332985
+"plug-in e propagação, taxa 1.0, semente 0",11.305213584011653
+"analítica, taxa 1.0, semente 0",252.77320229099132
+"plug-in e propagação, taxa 1.0, semente 1",11.332002332987031
+"analítica, taxa 1.0, semente 1",253.5915260000038
+"plug-in e propagação, taxa 1.0, semente 2",11.758914500009269
+"analítica, taxa 1.0, semente 2",257.4123720829957
