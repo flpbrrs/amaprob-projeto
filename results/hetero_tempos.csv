@@ -1,0 +1,18 @@
+etapa,segundos
+ajuste blr,0.08184875000733882
+ajuste blr_hetero λ = 0.1,13.025684958993224
+ajuste blr_hetero λ = 1.0,12.74047600000631
+ajuste blr_hetero λ = 10.0,13.011057749972679
+ajuste fa_condicional,106.16045095797745
+"blr, taxa 0.5, semente 0",80.49082695899415
+"blr_hetero, taxa 0.5, semente 0",81.82195725000929
+"blr, taxa 0.5, semente 1",80.40394508300233
+"blr_hetero, taxa 0.5, semente 1",81.08996258300613
+"blr, taxa 0.5, semente 2",80.75839237499167
+"blr_hetero, taxa 0.5, semente 2",81.12182570798905
+"blr, taxa 1.0, semente 0",83.35093620800762
+"blr_hetero, taxa 1.0, semente 0",84.97900887500145
+"blr, taxa 1.0, semente 1",82.95424799999455
+"blr_hetero, taxa 1.0, semente 1",97.5144264579867
+"blr, taxa 1.0, semente 2",83.73522595799295
+"blr_hetero, taxa 1.0, semente 2",86.2871318339894

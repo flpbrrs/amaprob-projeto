@@ -1,0 +1,23 @@
+etapa,segundos
+ajuste blr,0.08606025000335649
+ajuste log_linear,10.007457500003511
+ajuste aditiva,9.743893290986307
+ajuste fa_condicional,85.41406916698907
+"blr, taxa 0.5, semente 0",77.44500554099795
+"log_linear, taxa 0.5, semente 0",77.76418837500387
+"aditiva, taxa 0.5, semente 0",78.40584179200232
+"blr, taxa 0.5, semente 1",77.06917550001526
+"log_linear, taxa 0.5, semente 1",78.81395258300472
+"aditiva, taxa 0.5, semente 1",78.6706600410107
+"blr, taxa 0.5, semente 2",77.6611603750207
+"log_linear, taxa 0.5, semente 2",78.17419741599588
+"aditiva, taxa 0.5, semente 2",78.70181479200255
+"blr, taxa 1.0, semente 0",81.72661704200436
+"log_linear, taxa 1.0, semente 0",83.68579254200449
+"aditiva, taxa 1.0, semente 0",82.89424216700718
+"blr, taxa 1.0, semente 1",81.50524804199813
+"log_linear, taxa 1.0, semente 1",83.84552862501005
+"aditiva, taxa 1.0, semente 1",83.16797916698852
+"blr, taxa 1.0, semente 2",81.35549049999099
+"log_linear, taxa 1.0, semente 2",83.93758479200187
+"aditiva, taxa 1.0, semente 2",84.0380809159833

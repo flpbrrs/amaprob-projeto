@@ -1,0 +1,41 @@
+variavel,gamma
+intercepto,4.676209355753584
+presenca: Açúcar,0.19391430843796367
+presenca: Bebidas / açucaradas,0.8466797642886976
+presenca: Bebidas / cerveja e vinho,0.19771488635185624
+presenca: Bebidas / lácteas,-0.21377940081773977
+presenca: Bebidas / sem açúcar,-0.07517754816798755
+presenca: Carnes,-0.20317931712448623
+presenca: Cereais,-0.35020153151241523
+presenca: Doces,1.8105962834515263
+presenca: Farinhas e massas / Cereais Matinais,-0.5366768653809321
+presenca: Farinhas e massas / Farinha de mandioca,0.6491938181613582
+presenca: Farinhas e massas / Farofa,0.6537059370015778
+presenca: Farinhas e massas / Macarrão e preparações à base de macarrão,0.0032707435614209718
+presenca: Farinhas e massas / Macarrão instantâneo,-1.0539997768829759
+presenca: Farinhas e massas / Massas,0.060558138195691474
+presenca: Frutas,1.130277615343391
+presenca: Laticínios,1.272372700177708
+presenca: Legumes,0.24718556061076447
+presenca: Leguminosas,-0.21837079005868804
+presenca: Molhos e condimentos,-0.31690715138801795
+"presenca: Oleaginosas (castanhas, nozes, amendoins)",0.26830598583348697
+presenca: Ovos,-0.18014182026235975
+presenca: Panificados,-0.13665986998148974
+"presenca: Pizzas, salgados e sanduíches",0.8250711611787533
+presenca: Preparações mistas,1.0772234664103764
+presenca: Raízes e tubérculos,1.6705412828004564
+presenca: Sopas e caldos,0.5796002202090823
+presenca: Suplementos,-0.31817119751809547
+presenca: Verduras,0.05916299413758675
+presenca: Óleos e gorduras,-0.5915750016753548
+ocasiao: cafe,-0.4992875825967152
+ocasiao: almoco,0.3350481306151138
+ocasiao: lanche,-0.20144937736424
+ocasiao: jantar,0.16469476838268005
+ocasiao: ceia,-0.36809487471686464
+tamanho: 1,0.25091040333815684
+tamanho: 2,0.09863490945636179
+tamanho: 3,-0.1607942496835074
+tamanho: 4,-0.568144387585166
+tamanho: 5+,-0.18969561120583112

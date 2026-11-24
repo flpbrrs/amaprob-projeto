@@ -1,0 +1,36 @@
+variavel,coeficiente_g2
+v0,24.67834281623809
+presenca: Açúcar,0.0
+presenca: Bebidas / açucaradas,110.46712627548851
+presenca: Bebidas / cerveja e vinho,23.477644148075974
+presenca: Bebidas / lácteas,0.0
+presenca: Bebidas / sem açúcar,0.0
+presenca: Carnes,0.0
+presenca: Cereais,0.0
+presenca: Doces,520.013412721056
+presenca: Farinhas e massas / Cereais Matinais,0.0
+presenca: Farinhas e massas / Farinha de mandioca,54.88537618180692
+presenca: Farinhas e massas / Farofa,108.02548161179172
+presenca: Farinhas e massas / Macarrão e preparações à base de macarrão,6.831092080506236
+presenca: Farinhas e massas / Macarrão instantâneo,0.0
+presenca: Farinhas e massas / Massas,45.00710005697147
+presenca: Frutas,236.8653882418151
+presenca: Laticínios,285.2883706372417
+presenca: Legumes,17.549025876347685
+presenca: Leguminosas,0.0
+presenca: Molhos e condimentos,0.0
+"presenca: Oleaginosas (castanhas, nozes, amendoins)",65.2975005987173
+presenca: Ovos,0.0
+presenca: Panificados,11.493157826004166
+"presenca: Pizzas, salgados e sanduíches",149.5767320027983
+presenca: Preparações mistas,272.50068377176405
+presenca: Raízes e tubérculos,325.71192165341836
+presenca: Sopas e caldos,165.38774889149516
+presenca: Suplementos,0.0
+presenca: Verduras,0.0
+presenca: Óleos e gorduras,0.0
+ocasiao: cafe,1.2363974379740361
+ocasiao: almoco,33.22416285650352
+ocasiao: lanche,46.47572456899627
+ocasiao: jantar,39.53116571583691
+ocasiao: ceia,22.23932489287685
