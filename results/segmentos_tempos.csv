@@ -1,0 +1,21 @@
+etapa,segundos
+segmentos,11.956839666992892
+ajuste dos regressores (taxa 0),170.3410503329942
+"etapa A, blr",0.0650602079986129
+"etapa A, svgp",0.06284741699346341
+etapa B,0.0846745420130901
+ajuste de fa_condicional,85.8680419580196
+"etapa C, propagação S = 100",38.13421124999877
+"etapa C, analítica",1.4892911660135724
+"etapa C, propagação S = 100",38.58138979098294
+"etapa C, analítica",1.5027362499968149
+"etapa C, propagação S = 100",37.99733749998268
+"etapa C, analítica",1.4904279159964062
+"etapa C, propagação S = 100",38.53706416700152
+"etapa C, analítica",1.49441537502571
+"etapa C, propagação S = 100",37.90687354200054
+"etapa C, analítica",1.4854427079844754
+"etapa C, propagação S = 100",38.6581717079971
+"etapa C, analítica",1.519288499985123
+"etapa D, ranking e descrição",0.06621375001850538
+"etapa D, decomposição na taxa 1,0",1.578361458989093

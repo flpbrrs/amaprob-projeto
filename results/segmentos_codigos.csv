@@ -1,0 +1,25 @@
+variavel,codigo,rotulo,n_itens_brutos,n_itens_refeicoes_validas
+V9018,1,Em casa ou levado de casa,1039380,867190
+V9018,2,Merenda escolar,6878,6319
+V9018,3,Restaurante a quilo,3661,3528
+V9018,4,"Cantina, bar, lanchonete, fast food",9987,8697
+V9018,5,"Restaurante, outros",10197,9728
+V9018,6,Vendedores ambulantes ou de rua,1830,1588
+V9018,7,"Fora de casa, outros",96691,71539
+V9018,9,Não determinado,6766,319
+V9017,1,Café da manhã,255092,239538
+V9017,2,Almoço,353428,347824
+V9017,3,Lanche,158454,142737
+V9017,4,Jantar,239709,231087
+V9017,5,Ceia,10395,7722
+V9017,6,Outra ocasião,130534,0
+V9017,9,Não determinado,27778,0
+DIA_ATIPICO,1,atipico,114267,92028
+DIA_ATIPICO,2,tipico,1061123,876880
+DIA_SEMANA,Segunda-Feira,dia_util,182943,150922
+DIA_SEMANA,Terca-Feira,dia_util,206510,169796
+DIA_SEMANA,Quarta-Feira,dia_util,201343,165181
+DIA_SEMANA,Quinta-Feira,dia_util,207261,170935
+DIA_SEMANA,Sexta-Feira,dia_util,103945,86579
+DIA_SEMANA,Sabado,fim_de_semana,51197,42779
+DIA_SEMANA,Domingo,fim_de_semana,222191,182716
